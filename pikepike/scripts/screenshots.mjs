@@ -1,0 +1,19 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs/promises';
+const screens=['login','home','hub','vehicle','book','parking','charge','reservations','edit','cancel','unlock','trip','return','report','dashboard','resources','alerts','incident','schedule','transfer','scenario','simulation','results','apply'];
+await fs.mkdir('mockups',{recursive:true});
+const browser=await chromium.launch({headless:true,channel:'chromium'});
+const page=await browser.newPage({viewport:{width:1100,height:1020},deviceScaleFactor:2});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+for(let i=0;i<screens.length;i++){
+ await page.goto(`http://127.0.0.1:5173/?screen=${screens[i]}`);await page.evaluate(()=>document.fonts.ready);await page.locator('.phone').screenshot({path:`mockups/${String(i+1).padStart(2,'0')}-${screens[i]}.png`});
+}
+await page.goto('http://127.0.0.1:5173/?screen=home');await page.locator('.phone').getByRole('button',{name:'Tìm xe ngay'}).click();await page.locator('.phone').getByRole('button',{name:'Đặt xe này'}).click();await page.locator('.phone').getByRole('button',{name:'Xác nhận đặt xe'}).click();await page.locator('.phone').getByRole('button',{name:'Nhận xe ngay'}).click();await page.getByPlaceholder('Nhập 6 số · Demo: 248012').fill('248012');await page.locator('.phone').getByRole('button',{name:'Mở khóa & bắt đầu'}).click();await page.locator('.phone').getByRole('button',{name:'Trả xe tại Hub'}).click();await page.locator('.phone').getByRole('button',{name:'Xác nhận trả xe'}).click();
+await page.goto('http://127.0.0.1:5173/?screen=scenario');await page.locator('.phone').getByRole('button',{name:'Lưu & tiếp tục'}).click();await page.locator('.phone').getByRole('button',{name:'Chạy mô phỏng',exact:true}).click();await page.locator('.phone').getByRole('button',{name:'Xem & xác nhận áp dụng'}).click();await page.locator('.phone').getByRole('button',{name:'Xác nhận áp dụng',exact:true}).click();await page.locator('.phone').getByRole('button',{name:'Quay về dashboard'}).waitFor();
+await page.setViewportSize({width:390,height:844});await page.goto('http://127.0.0.1:5173/?screen=home');const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);if(overflow)errors.push('Mobile horizontal overflow');
+await page.setViewportSize({width:1800,height:2990});
+const images=await Promise.all(screens.map(async(s,i)=>({name:s,file:await fs.readFile(`mockups/${String(i+1).padStart(2,'0')}-${s}.png`,'base64')})));
+await page.setContent(`<html><body style="margin:0;padding:50px;background:#e9eee7;font-family:Arial;color:#284132"><h1 style="font-size:50px;margin:0">PikePike<span style="color:#ff702e">.</span></h1><p style="font-size:18px;color:#85937f;margin-bottom:35px">SMART E-MOBILITY HUB · 24 MOBILE SCREENS · UI MOCKUP</p><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:25px 20px">${images.map((x,i)=>`<div><img style="width:100%;display:block" src="data:image/png;base64,${x.file}"/><p style="font-size:13px;text-align:center;color:#65775e">${String(i+1).padStart(2,'0')} / ${x.name}</p></div>`).join('')}</div></body></html>`);
+await page.screenshot({path:'mockups/00-all-screens.png',fullPage:true});
+await fs.writeFile('mockups/index.html',`<!doctype html><meta charset="utf-8"><title>PikePike mockups</title><style>body{background:#e9eee7;font-family:Arial;padding:30px;color:#284132}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:30px}img{width:100%}a{color:inherit;text-decoration:none}h2{font-size:14px}</style><h1>PikePike · 24 màn hình</h1><main>${screens.map((s,i)=>`<a href="${String(i+1).padStart(2,'0')}-${s}.png"><h2>${i+1}. ${s}</h2><img src="${String(i+1).padStart(2,'0')}-${s}.png"></a>`).join('')}</main>`);
+await browser.close();if(errors.length)throw new Error(errors.join('\n'));console.log('24 phone mockups + overview captured. Student trip + What-if flows passed. No runtime errors or mobile overflow.');

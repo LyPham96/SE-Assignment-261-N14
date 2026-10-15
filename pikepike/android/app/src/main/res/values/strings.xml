@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PikePike</string>
+    <string name="title_activity_main">PikePike</string>
+    <string name="package_name">vn.pikepike.app</string>
+    <string name="custom_url_scheme">vn.pikepike.app</string>
+</resources>
