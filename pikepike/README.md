@@ -1,5 +1,15 @@
 # PikePike
 
+## Cài đặt giao diện và ngôn ngữ
+
+Bấm bánh răng trên thanh đầu trang để mở hồ sơ tài khoản và Cài đặt. Chế độ Sáng/Tối và Việt/Anh áp dụng cho toàn bộ app, ghi nhớ bằng localStorage. Không thêm nghiệp vụ thanh toán.
+
+Xuất đầy đủ 25 màn hình trong 4 tổ hợp (100 PNG có khung iPhone 14 Pro):
+```sh
+node scripts/preferences-mockups.mjs
+```
+Chạy dev server trước khi xuất. Mở `mockups/preferences.html` để duyệt Light–VI, Light–EN, Dark–VI và Dark–EN; ảnh so sánh Cài đặt tại `mockups/00-settings-variants.png`.
+
 Mockup tương tác Smart E-Mobility Hub, React + TypeScript, lấy hướng thiết kế từ ảnh tham chiếu: nền xanh nhạt–kem, thẻ trắng bo tròn, cam chủ đạo, thanh điều hướng nổi.
 
 ## Chạy

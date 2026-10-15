@@ -1,0 +1,33 @@
+/* Blue Glacier: solid white canvas and flat blue surfaces. */
+:root{--ink:#233552;--muted:#65768e;--accent:#3c65d1;--glass:#fff;--rim:1px solid #dbe7f3;--glass-shadow:none;color:#233552;background:#fff}
+.studio,.preview,.phone-screen,.catalog,.scroll{background:#fff;background-image:none}
+.catalog{border-color:#e5edf6}.catalog button.current{background:#d0f1f7;color:#3c65d1}.catalog h4,.catalog button{color:#65768e}.brand svg,.header-brand span{color:#3c65d1}
+.card,.search,.role,.stats>div,.categories button,.field input,.field select,.field textarea,.btn.secondary,.spot,.check-row,.bottom-nav,.service-switch button,.current-booking,.metric-main,.simulation-entry,.primary-dock,.brand-notification,.icon-button{background:#fff;background-image:none;border-color:#d9e6f3;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.btn,.hero button{background:#3c65d1;color:#fff;box-shadow:none;border-color:#3c65d1}.btn.secondary{background:#fff;color:#3c65d1;border:1px solid #90d1f3}.btn:focus-visible{outline-color:#3c65d1}
+.field input,.field select,.field textarea{background:#fff;color:#233552;border:1px solid #b9d5ed}.field input:focus,.field select:focus,.field textarea:focus{border-color:#3c65d1;box-shadow:0 0 0 2px #d0f1f7}.field>span{color:#526784}
+.brand-notification{background:#d0f1f7;border-color:#a1e3f7}.brand-notification>span>i,.notification i{background:#3c65d1}.brand-notification .notification{background:#fff;border-color:#a1e3f7;box-shadow:none}.bottom-nav{background:#fff;border-color:#b9d5ed;box-shadow:0 3px 12px #2335520d}.bottom-nav button{background:#fff;color:#6d8ba8}.bottom-nav button.active{background:#d0f1f7;color:#3c65d1;border-color:#a1e3f7;box-shadow:none}.primary-dock{border-color:#d9e6f3;background:#fff}
+.badge,.badge.warn,.charge-banner,.note,.countdown,.schedule-time,.rank,.hub-symbol,.role.selected,.spot.selected,.online-indicator,.ops-notice,.alert-card{background:#d0f1f7;color:#365da3;border-color:#a1e3f7;box-shadow:none}.note{border-left-color:#6dacea}.note svg,.charge-banner svg,.alert-card svg{color:#3c65d1}.charge-banner p,.ops-notice b,.ops-notice small,.alert-card p{color:#526f91}.role.selected{border-color:#3c65d1}.spot:disabled{background:#edf2f7;color:#9aa9ba;border-color:#e0e8f1}
+.stats b,.metric-main>strong,.metric-side b,.network-table-row>b,.route b,.result-stats b{color:#3c65d1}.stats span,.muted,.footnote{color:#73849a}.text-btn,.split-actions button,.split-actions .danger{color:#3c65d1}.chips .active{color:#3c65d1;border-color:#3c65d1;background:#fff}.chips button{color:#7488a2}
+.hero:not(.ops-hero),.ride-banner{background:#233552 url('/images/banner.png') center 55%/cover;background-image:url('/images/banner.png');border-color:#d9e6f3}.hero:not(.ops-hero)>div{background:#233552c9;border-radius:10px;padding:10px;max-width:76%}.hero{padding:12px}.banner-copy{height:100%;width:76%;background:#233552c9;padding:15px}.banner-copy button,.hero-tag{background:#3c65d1;color:#fff;border-color:#90d1f3;backdrop-filter:none}.banner-copy>span{color:#d0f1f7}.hero p{color:#fff}
+.availability i,.occupancy i,.chart>div,.chart>div:nth-child(n+5):nth-child(-n+7),.progress i{background:#6dacea!important}.progress,.availability>span,.occupancy>span{background:#d0f1f7}.live-dot:before,.online-indicator i{background:#3c65d1}.network-table-row h3 svg{fill:#3c65d1}.warning-card,.ops-notice{border-left-color:#6dacea}.booking-mark{background:#d0f1f7;border-color:#a1e3f7}.current-booking,.simulation-entry,.ops-actions>button{color:#3c65d1}
+.map{background:#eef8fc;border-color:#d0f1f7}.road{background:#fff;box-shadow:0 0 0 1px #d0f1f7}.map-pin{background:#3c65d1;border-color:#90d1f3}.map-you{color:#3c65d1}.map-label{color:#738ca6}
+.orbit{color:#3c65d1;border-color:#6dacea}.orbit:before{border-color:#d0f1f7;box-shadow:none;backdrop-filter:none}.sim-steps span{background:#d0f1f7;color:#3c65d1;border-color:#a1e3f7}.scanner{background:#233552;border-color:#6dacea;box-shadow:none}.scan-line{background:#90d1f3;box-shadow:none}.scan-corner{border-color:#90d1f3}.toast{background:#3c65d1;color:#fff;box-shadow:none;backdrop-filter:none}.home-indicator{background:#233552}
+html[data-screen='charge'] .charge-banner{background:#d0f1f7}html[data-screen='scenario'] .two-fields{background:#fff;border-color:#d9e6f3}html[data-screen='trip'] .trip-timer>strong{color:#3c65d1}
+@keyframes pulse{50%{box-shadow:0 0 0 12px #d0f1f7}}
+
+/* Solid white canvas; translucent glass lives on top of it. */
+.card,.search,.role,.categories button,.field input,.field select,.field textarea,.btn.secondary,.spot,.bottom-nav,.service-switch button,.current-booking,.metric-main,.simulation-entry,.primary-dock,.brand-notification,.icon-button{
+ background-color:#ffffff85;border-color:#d2e4f0;backdrop-filter:blur(20px) saturate(145%);-webkit-backdrop-filter:blur(20px) saturate(145%);box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #ffffff9c,0 3px 12px #3c65d10a;
+}
+.field input,.field select,.field textarea{background-color:#f1faff66;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%)}
+.bottom-nav,.primary-dock{background-color:#ffffffa6;backdrop-filter:blur(25px) saturate(160%);-webkit-backdrop-filter:blur(25px) saturate(160%)}
+.brand-notification{background-color:#d0f1f780}.brand-notification .notification{background-color:#ffffff85;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px #fff}
+.bottom-nav button.active,.role.selected,.spot.selected{background-color:#d0f1f77a;box-shadow:inset 0 1px #fff}
+html[data-screen='charge'] .charge-banner{display:none}
+
+/* Only photographic banners use a gradient: feather the glass overlay into the image. */
+.hero:not(.ops-hero),.ride-banner{isolation:isolate}
+.hero:not(.ops-hero)>div,.banner-copy{background:transparent;border-radius:0;position:relative;z-index:1}
+.hero:not(.ops-hero)::before,.ride-banner::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg,#172c48db 0%,#172c48ad 34%,#172c4838 70%,#172c4800 100%);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);mask-image:linear-gradient(90deg,#000 0%,#000 34%,#000a 61%,transparent 100%);-webkit-mask-image:linear-gradient(90deg,#000 0%,#000 34%,#000a 61%,transparent 100%)}
+.hero:not(.ops-hero)>div{max-width:82%;padding:10px}.banner-copy{width:82%}
+.hero-tag,.banner-copy button{background:#ffffff30;border:1px solid #ffffff80;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:inset 0 1px #ffffff80}
