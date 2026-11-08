@@ -1,8 +1,14 @@
 % -------------------- CẤU HÌNH TRANG & FONT -------------------
 %cho in 2 mặt twoside,
 \usepackage[a4paper, left=2.5cm, right=2cm, top=2cm, bottom=2cm,includehead, includefoot]{geometry}   % Thiết lập khổ giấy A4, lề 
-\usepackage{vntex}                          % Hỗ trợ tiếng Việt
-\usepackage[utf8]{inputenc}                 % Mã hóa UTF-8
+\usepackage{iftex}
+\ifXeTeX                                    % Tectonic / XeLaTeX: font Unicode
+  \usepackage{fontspec}
+  \setmainfont{TeX Gyre Termes}
+\else                                       % pdfLaTeX (TeX Live, MiKTeX, Overleaf)
+  \usepackage{vntex}                          % Hỗ trợ tiếng Việt
+  \usepackage[utf8]{inputenc}                 % Mã hóa UTF-8
+\fi
 %\usepackage{indentfirst}                    % Thụt đầu dòng đoạn đầu tiên
 
 % -------------------- MÀU SẮC & KHUNG --------------------
@@ -25,7 +31,7 @@
 \titleformat{\paragraph}
   {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
 \titlespacing*{\paragraph}{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
-\DeclareUnicodeCharacter{2212}{-}           % Fix ký tự dấu trừ
+\ifdefined\DeclareUnicodeCharacter\DeclareUnicodeCharacter{2212}{-}\fi % chi pdfLaTeX can; XeTeX/Tectonic bo qua
 
 % Định dạng hiển thị tiêu đề
 \titleformat{\section}{\bfseries\Large}{\thesection.}{0.5em}{}

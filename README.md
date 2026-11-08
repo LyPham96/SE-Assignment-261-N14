@@ -31,6 +31,11 @@ Báo cáo LaTeX viết chung bằng **VS Code + LaTeX Workshop + GitHub**. Mỗi
    git config --global user.email "email@github"
    ```
 
+**Máy yếu, không cài nổi TeX Live (~8 GB)?** Dùng **Tectonic** (~40 MB, gói thiếu tự tải về lần đầu, cần mạng):
+1. Tải `tectonic-*-x86_64-pc-windows-msvc.zip` ở https://github.com/tectonic-typesetting/tectonic/releases, giải nén `tectonic.exe` và thêm thư mục đó vào PATH.
+2. Mở lại VS Code → `Ctrl+Shift+P` → **LaTeX Workshop: Build with recipe** → chọn **tectonic**. Từ đó Ctrl+S sẽ dùng tectonic.
+Tectonic không để lại .aux/.toc nên không bao giờ dính lỗi cache. PDF ra giống bản pdfLaTeX (đã so).
+
 **Không muốn cài TeX?** Vẫn được: sửa trực tiếp trên web (vào repo trên GitHub, chuyển sang nhánh `report`, bấm phím `.` để mở editor online). Sau đó tải PDF ở tab **Actions** (xem mục 5). Nhược điểm: mỗi lần xem PDF phải đợi vài phút.
 
 ## 3. Lấy báo cáo về máy
@@ -75,6 +80,7 @@ Mỗi lần push file `.tex`/ảnh lên nhánh `report`, GitHub Actions tự com
 - Tách mỗi mục con thành một file riêng, đầu mỗi file ghi `% Phụ trách: ...`.
 - Đổi tên file có dấu phẩy, dấu tiếng Việt, khoảng trắng (`01_Update_Sub1,2.tex` → `01_Update_Sub1_2.tex`, `Phụ lục.tex` → `05_PhuLuc.tex`, `logo (1).png` → `logo.png`). Tên kiểu này dễ lỗi khi git chạy qua lại giữa Windows và macOS.
 - Sửa 7 lỗi `&` chưa escape trong chương 3.
+- `lib.sty` chạy được cả pdfLaTeX lẫn XeTeX/Tectonic (font tiếng Việt chọn theo engine); bỏ dòng trống trong `\fancyhead` (bản fancyhdr cũ báo lỗi).
 - Tắt `minted` trong `lib.sty`: package này cần `-shell-escape` + Python Pygments và hiện không dùng. Muốn chèn code thì dùng `lstlisting`.
 - VS Code tự xoá cache khi compile lỗi (`autoClean: onFailed`), nên sửa xong chỉ cần Ctrl+S, không phải xoá tay. Nếu vẫn kẹt thì `Ctrl+Shift+P` → **LaTeX Workshop: Clean up auxiliary files**.
 - File rác và PDF nằm trong thư mục `build/` (đã có trong `.gitignore`), không bị commit lên.

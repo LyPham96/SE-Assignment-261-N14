@@ -1,10 +1,16 @@
 {
-  "latex-workshop.latex.recipe.default": "latexmk",
+  "latex-workshop.latex.recipe.default": "lastUsed",
   "latex-workshop.latex.recipes": [
     {
-      "name": "latexmk",
+      "name": "latexmk (TeX Live/MiKTeX)",
       "tools": [
         "latexmk"
+      ]
+    },
+    {
+      "name": "tectonic (nhe, khong can TeX Live)",
+      "tools": [
+        "tectonic"
       ]
     }
   ],
@@ -14,6 +20,20 @@
       "command": "latexmk",
       "args": [
         "%DOC%"
+      ],
+      "env": {}
+    },
+    {
+      "name": "tectonic",
+      "command": "tectonic",
+      "args": [
+        "-X",
+        "compile",
+        "%DOC_EXT%",
+        "--outdir",
+        "%OUTDIR%",
+        "--synctex",
+        "--keep-logs"
       ],
       "env": {}
     }
