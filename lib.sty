@@ -4,7 +4,7 @@
 \usepackage{iftex}
 \ifXeTeX                                    % Tectonic / XeLaTeX: font Unicode
   \usepackage{fontspec}
-  \setmainfont{TeX Gyre Termes}
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic] % goi theo ten file: lay tu goi cua Tectonic, khong can font cai trong Windows
 \else                                       % pdfLaTeX (TeX Live, MiKTeX, Overleaf)
   \usepackage{vntex}                          % Hỗ trợ tiếng Việt
   \usepackage[utf8]{inputenc}                 % Mã hóa UTF-8
