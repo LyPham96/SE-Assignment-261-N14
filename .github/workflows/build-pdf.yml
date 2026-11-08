@@ -1,0 +1,29 @@
+name: Build PDF
+
+# Chỉ build khi đổi file LaTeX/ảnh trên nhánh report.
+on:
+  push:
+    branches: [report]
+    paths: ["**.tex", "**.sty", "**.bib", "image/**", ".latexmkrc"]
+
+# Push liên tiếp thì hủy bản build cũ, chỉ giữ bản mới nhất
+concurrency:
+  group: build-pdf
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: BTL_CNPM_PDF
+          path: build/main.pdf
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,38 @@
+{
+  "latex-workshop.latex.recipe.default": "latexmk",
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk",
+      "tools": [
+        "latexmk"
+      ]
+    }
+  ],
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": [
+        "%DOC%"
+      ],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.rootFile.doNotPrompt": true,
+  "latex-workshop.latex.rootFile.useSubFile": false,
+  "latex-workshop.latex.outDir": "%DIR%/build",
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.latex.autoClean.run": "onFailed",
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "[latex]": {
+    "editor.wordWrap": "on"
+  },
+  "latex-workshop.latex.clean.method": "cleanCommand",
+  "latex-workshop.latex.clean.command": "latexmk",
+  "latex-workshop.latex.clean.args": [
+    "-c",
+    "%DOC%"
+  ]
+}
