@@ -9,17 +9,17 @@ await Promise.all(['light-vi','light-en','dark-vi','dark-en'].map(async variant=
  await context.addInitScript(({theme,language})=>{localStorage.setItem('pikepike-theme',theme);localStorage.setItem('pikepike-language',language)},{theme,language});
  const page=await context.newPage();page.on('pageerror',e=>failures.push(`${variant}: ${e.message}`));
  for(let i=0;i<screens.length;i++){
-  await page.goto(`http://127.0.0.1:5173/?screen=${screens[i]}`);await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(70);
+  await page.goto(`http://127.0.0.1:5173/?mode=mockup&screen=${screens[i]}`);await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(70);
   await page.locator('.phone').screenshot({path:`${dir}/${String(i+1).padStart(2,'0')}-${screens[i]}.png`});
  }
- await page.setViewportSize({width:393,height:852});await page.goto('http://127.0.0.1:5173/?screen=settings');
+ await page.setViewportSize({width:393,height:852});await page.goto('http://127.0.0.1:5173/?mode=mockup&screen=settings');
  const state=await page.evaluate(()=>({theme:document.documentElement.dataset.theme,language:document.documentElement.lang,overflow:document.documentElement.scrollWidth>innerWidth}));
  if(state.theme!==theme||state.language!==language||state.overflow)failures.push(`${variant}: ${JSON.stringify(state)}`);
  await fs.writeFile(`${dir}/index.html`,`<!doctype html><meta charset="utf-8"><title>PikePike ${variant}</title><style>body{font:15px Arial;background:${theme==='dark'?'#101b2b':'#fff'};color:${theme==='dark'?'#e1edff':'#233552'};padding:24px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px}img{width:100%}a{color:inherit;text-decoration:none}h2{font-size:15px}</style><h1>PikePike · ${variant}</h1><main>${screens.map((s,i)=>`<a href="${String(i+1).padStart(2,'0')}-${s}.png"><h2>${i+1}. ${s}</h2><img src="${String(i+1).padStart(2,'0')}-${s}.png"></a>`).join('')}</main>`);
  await context.close();
 }));
 const page=await browser.newPage({viewport:{width:393,height:852}});
-await page.goto('http://127.0.0.1:5173/?screen=home');await page.getByRole('button',{name:'Cài đặt',exact:true}).click();
+await page.goto('http://127.0.0.1:5173/?mode=mockup&screen=home');await page.getByRole('button',{name:'Cài đặt',exact:true}).click();
 await page.getByRole('button',{name:'Tối',exact:true}).click();await page.getByRole('button',{name:'EN English Tiếng Anh'}).click();
 await page.reload();await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();
 if(await page.evaluate(()=>document.documentElement.dataset.theme)!=='dark')failures.push('Theme not persisted');

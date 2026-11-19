@@ -7,7 +7,7 @@ for(const language of ['vi','en']){
  await page.addInitScript(language=>{localStorage.setItem('pikepike-theme','dark');localStorage.setItem('pikepike-language',language)},language);
  page.on('pageerror',e=>failures.push(e.message));
  for(const screen of screens){
-  await page.goto(`http://127.0.0.1:5173/?screen=${screen}`);await page.evaluate(()=>document.fonts.ready);
+  await page.goto(`http://127.0.0.1:5173/?mode=mockup&screen=${screen}`);await page.evaluate(()=>document.fonts.ready);
   const issues=await page.locator('.phone').evaluate(root=>{
    const issues=[];
    for(const element of root.querySelectorAll('*')){

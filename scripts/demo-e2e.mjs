@@ -1,0 +1,87 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
+import { createPool } from '../server/src/db.mjs';
+import { createApp } from '../server/src/app.mjs';
+import { migrate } from '../server/src/migrate.mjs';
+import { seed } from '../server/src/seed.mjs';
+
+const databaseUrl = process.env.TEST_DATABASE_URL;
+if (!databaseUrl || new URL(databaseUrl).pathname !== '/pikepike_test') throw new Error('TEST_DATABASE_URL must point to the isolated pikepike_test database');
+await mkdir('test-results', { recursive: true });
+const pool = createPool(databaseUrl);
+let app;
+let vite;
+let browser;
+try {
+  await migrate(databaseUrl);
+  await pool.query('TRUNCATE audit_logs,no_shows,reservations,spots,vehicles,hubs,sessions,users RESTART IDENTITY CASCADE');
+  await seed(pool);
+  app = await createApp({ pool });
+  await app.listen({ host: '127.0.0.1', port: 3002 });
+  vite = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], { env: { ...process.env, API_TARGET: 'http://127.0.0.1:3002' }, windowsHide: true, stdio: 'pipe' });
+  let ready = false;
+  for (let i = 0; i < 60; i++) {
+    try { ready = (await fetch('http://127.0.0.1:5174/api/health')).ok; } catch {}
+    if (ready) break;
+    await delay(500);
+  }
+  assert.ok(ready, 'Vite did not become ready');
+  const channel = process.env.BROWSER_CHANNEL ?? (existsSync('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe') ? 'msedge' : undefined);
+  browser = await chromium.launch({ headless: true, channel });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+  const runtimeErrors = [];
+  page.on('pageerror', error => runtimeErrors.push(error.message));
+  await page.goto('http://127.0.0.1:5174');
+  await page.getByRole('heading', { name: 'Đăng nhập', exact: true }).waitFor();
+  await page.screenshot({ path: 'test-results/demo-login-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await page.getByRole('heading', { name: 'Hôm nay, mình đi đâu?' }).waitFor();
+  await page.getByRole('button', { name: 'Chọn xe này', exact: true }).first().waitFor();
+  await page.screenshot({ path: 'test-results/demo-hubs-desktop.png', fullPage: true });
+  const vehicleCard = page.locator('.demo-vehicle').filter({ has: page.getByRole('heading', { name: 'Pike City 01', exact: true }) });
+  await vehicleCard.getByRole('button', { name: 'Chọn xe này' }).click();
+  await page.getByLabel('Hub trả xe dự kiến').selectOption('ktx');
+  await page.getByRole('button', { name: 'Xác nhận đặt xe', exact: true }).click();
+  await page.getByText('Đặt xe thành công. Xe được giữ trong 15 phút.').waitFor();
+  await page.getByRole('button', { name: 'Hủy đặt chỗ', exact: true }).waitFor();
+  await page.reload();
+  await page.getByRole('button', { name: 'Đặt chỗ của tôi', exact: false }).click();
+  await page.getByRole('button', { name: 'Hủy đặt chỗ', exact: true }).waitFor();
+  assert.equal((await pool.query("SELECT status FROM vehicles WHERE id='PK-1'")).rows[0].status, 'DA_DAT');
+  await page.getByRole('button', { name: 'Hủy đặt chỗ', exact: true }).click();
+  await page.getByRole('button', { name: 'Giữ lại đặt chỗ', exact: true }).click();
+  assert.equal((await pool.query("SELECT status FROM vehicles WHERE id='PK-1'")).rows[0].status, 'DA_DAT');
+  await page.getByRole('button', { name: 'Hủy đặt chỗ', exact: true }).click();
+  await page.getByRole('button', { name: 'Xác nhận hủy đặt chỗ', exact: true }).click();
+  await page.getByText('Đã hủy', { exact: true }).waitFor();
+  assert.equal((await pool.query("SELECT status FROM vehicles WHERE id='PK-1'")).rows[0].status, 'SAN_SANG');
+  assert.equal((await pool.query("SELECT status FROM spots WHERE vehicle_id='PK-1'")).rows[0].status, 'OCCUPIED');
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM spots WHERE status='RESERVED'")).rows[0].n, 0);
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.screenshot({ path: 'test-results/demo-reservations-mobile.png', fullPage: true });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Mobile layout overflows');
+  await page.getByRole('button', { name: 'Khám phá', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn xe này', exact: true }).first().waitFor();
+  await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click();
+  await page.screenshot({ path: 'test-results/demo-hubs-mobile-dark.png', fullPage: true });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Dark mobile layout overflows');
+  const secondContext = await browser.newContext();
+  const second = await secondContext.newPage();
+  await second.goto('http://127.0.0.1:5174');
+  await second.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await second.getByRole('heading', { name: 'Hôm nay, mình đi đâu?' }).waitFor();
+  await page.getByRole('heading', { name: 'Đăng nhập', exact: true }).waitFor({ timeout: 10000 });
+  await page.getByRole('alert').waitFor();
+  assert.deepEqual(runtimeErrors, []);
+  console.log('PASS: login, hubs, reserve destination, reload persistence, dismiss cancellation, cancel, source parking, mobile, dark mode, session revocation, no runtime errors');
+} finally {
+  await browser?.close();
+  vite?.kill();
+  await app?.close();
+  await pool.end();
+}

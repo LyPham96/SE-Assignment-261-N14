@@ -1,0 +1,14 @@
+{
+  "reservationMinutes": 15,
+  "sessionMinutes": 30,
+  "loginLockMinutes": 15,
+  "maxLoginFailures": 5,
+  "minimumBattery": 20,
+  "lowBattery": 30,
+  "nearFull": 0.85,
+  "blockBooking": 0.95,
+  "noShowLimit": 2,
+  "bookingLockHours": 24,
+  "schedulerMilliseconds": 60000,
+  "businessTimezone": "Asia/Ho_Chi_Minh"
+}

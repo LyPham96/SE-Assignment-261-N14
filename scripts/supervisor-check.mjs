@@ -5,7 +5,7 @@ for(const theme of ['light','dark'])for(const language of ['vi','en']){
  const page=await browser.newPage({viewport:{width:393,height:852}});
  await page.addInitScript(({theme,language})=>{localStorage.setItem('pikepike-theme',theme);localStorage.setItem('pikepike-language',language)},{theme,language});
  page.on('pageerror',e=>failures.push(e.message));
- await page.goto('http://127.0.0.1:5173/?screen=dashboard');
+ await page.goto('http://127.0.0.1:5173/?mode=mockup&screen=dashboard');
  for(const [index,route] of ['alerts','incident','schedule','transfer','scenario','results'].entries()){
   await page.locator('.supervisor-links>button').nth(index).click();
   if(new URL(page.url()).searchParams.get('screen')!==route)failures.push(`${theme}/${language}: shortcut ${route}`);

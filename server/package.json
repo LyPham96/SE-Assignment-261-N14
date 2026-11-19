@@ -1,0 +1,22 @@
+{
+  "name": "pikepike-api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/start.mjs",
+    "migrate": "node src/migrate.mjs",
+    "seed": "node src/seed.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "^6.1.4",
+    "fastify": "^5.0.0",
+    "node-pg-migrate": "^8.0.0",
+    "pg": "^8.0.0"
+  }
+}
