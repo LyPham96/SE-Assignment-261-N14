@@ -4,7 +4,6 @@ import './operations.css';
 type Api = (path: string, body?: object, method?: string) => Promise<any>;
 type PanelProps = {api: Api};
 type ResultHandler = (action: () => Promise<unknown>) => void;
-const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const encode = encodeURIComponent;
 function useOutput() {
   const [output, setOutput] = useState<unknown>();
@@ -175,28 +174,4 @@ export function SimulationResultScreen({api}: PanelProps) {
     <Field label="ID khuyến nghị được chọn" value={ids} set={setIds}/>
     <button disabled={o.busy || !id || !ids} onClick={() => o.run(async () => {setReady('');const result=await api(runPath + '/preview',{recommendationIds:split(ids)});setReady(selection);return result;})}>Xem trước tác động</button>
     <button disabled={o.busy || ready !== selection} onClick={() => o.run(async () => {const result=await api(runPath + '/apply',{recommendationIds:split(ids),confirmed:true});setReady('');return result;})}>Xác nhận áp dụng</button>{o.view}</Panel>;
-}
-const panels = {ChargingUI,GiaoDienBaoSuCo,DashboardUI,OperationsUI,RebalancingScreen,RebalancingTaskScreen,ReportScreen,ScenarioScreen,SimulationResultScreen};
-const labels = ['Đăng ký sạc','Báo sự cố','Tổng quan','Vận hành','Điều chuyển','Nhiệm vụ','Báo cáo','Kịch bản','Kết quả'];
-export function OperationsApp() {
-  const [draft,setDraft] = useState('');
-  const [token,setToken] = useState('');
-  const [panel,setPanel] = useState<keyof typeof panels>('ChargingUI');
-  const [api,setApi] = useState<Api>(() => async () => {throw new Error('Hãy nhập mã phiên');});
-  const PanelComponent = panels[panel];
-  function connect() {
-    setToken(draft);
-    setApi(() => async (path: string, body?: object, method?: string) => {
-      const response = await fetch(apiBase + '/api/v1' + path,{method:method ?? (body ? 'POST' : 'GET'),headers:{Authorization:'Bearer ' + draft,...body && {'Content-Type':'application/json'}},body:body && JSON.stringify(body)});
-      if (response.status === 204) return {success:true};
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.code ?? JSON.stringify(result.fieldErrors ?? result));
-      return result;
-    });
-    setDraft('');
-  }
-  return <main className="m3m4"><h1>PikePike · Vận hành</h1><a href="/#">Về trang chính</a>
-    <form onSubmit={event => {event.preventDefault();connect();}}><Field label="Mã phiên" value={draft} set={setDraft} type="password"/><button disabled={!draft}>Kết nối</button></form>
-    {token && <><nav aria-label="Chức năng vận hành">{(Object.keys(panels) as (keyof typeof panels)[]).map((key,index) => <button key={key} aria-pressed={panel === key} onClick={() => setPanel(key)}>{labels[index]}</button>)}</nav><PanelComponent key={panel} api={api}/></>}
-  </main>;
 }

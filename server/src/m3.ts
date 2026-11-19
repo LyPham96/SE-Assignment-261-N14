@@ -193,6 +193,7 @@ export class MonitoringService {
       hub, ...state.dataStatus(hub.id, this.db.now()), ratio: state.parkingRatio(hub.id),
       vehicles: state.vehicles.filter(vehicle => vehicle.hubId === hub.id),
       points: state.points.filter(point => point.hubId === hub.id),
+      spots: state.spots.filter(spot => spot.hubId === hub.id),
       alerts: state.alerts.filter(alert => alert.hubId === hub.id && !alert.closedAt),
     }));
   }

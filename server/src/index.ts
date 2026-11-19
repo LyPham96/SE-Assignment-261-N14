@@ -73,6 +73,20 @@ export async function createServer(pool: pg.Pool) {
   app.get('/healthz', async () => { await pool.query('SELECT 1 FROM hub LIMIT 1'); return {ok: true}; });
   app.get('/api/v1/openapi.json', () => app.swagger());
 
+  route('GET','/me',undefined,db => {
+    const user = db.state.users.find(item => item.id === db.actor)!;
+    return {id:user.id,role:user.role,hubs:db.state.hubs.map(({id,name}) => ({id,name})),
+      vehicles:db.state.vehicles.filter(vehicle => vehicle.ownerId === user.id && vehicle.approved),
+      trips:db.state.trips.filter(trip => trip.userId === user.id && trip.active)};
+  });
+  route('GET','/operations/technicians',undefined,db => {
+    db.authorize('OPERATOR'); return db.state.users.filter(user => user.role === 'TECHNICIAN').map(({id}) => ({id}));
+  });
+  route('GET','/charging/schedules',object({maHub:string}),(db,i) => {
+    db.authorize('OPERATOR','TECHNICIAN');
+    const requests = db.state.requests.filter(item => item.hubId === i.maHub);
+    return {requests,sessions:db.state.sessions.filter(session => requests.some(item => item.id === session.requestId))};
+  });
   route('GET','/charging/info',object({maXe:string,maHub:string}), (db,input) => {
     db.authorize('STUDENT');
     requireRule(db.state.vehicles.some(vehicle => vehicle.id === input.maXe && vehicle.ownerId === db.actor), 'FORBIDDEN');
@@ -103,7 +117,7 @@ export async function createServer(pool: pg.Pool) {
   route('PUT','/incidents/:id/repair',object({ketQua:string}),(db,i,p) => new IncidentService(db).capNhatKetQuaKhacPhuc(p.id,i.ketQua));
   route('POST','/incidents/:id/conclude',object({dat:boolean}),(db,i,p) => new IncidentService(db).ketLuanKiemTra(p.id,i.dat));
   route('GET','/dashboard',object({hubIds:strings},[]),(db,i) => {db.authorize('OPERATOR','TECHNICIAN');return new MonitoringService(db).layTongQuanMangLuoi(i);});
-  route('GET','/alerts',undefined,db => {db.authorize('OPERATOR');return db.state.alerts;});
+  route('GET','/alerts',undefined,db => {db.authorize('OPERATOR','TECHNICIAN');return db.state.alerts;});
   route('POST','/iot/messages',object({maTaiNguyen:string,loaiTaiNguyen:choice('XE','CONG_SAC'),trangThai:string,mucPin:number,thoiDiem:number,nguon:choice('IOT_THAT','MO_PHONG')},['maTaiNguyen','loaiTaiNguyen','trangThai','thoiDiem','nguon']), (db,i) => new IoTGateway(new ResourceService(db)).nhanBanTin(i as BanTinTrangThai), {device:true});
 
   route('GET','/rebalancing/proposal',object({sourceHubId:string,destHubId:string}), (db,i) => {db.authorize('OPERATOR'); return new RebalancingController(db).proposeTransfer(i.sourceHubId,i.destHubId);});

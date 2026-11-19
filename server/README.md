@@ -1,6 +1,6 @@
 # Chạy M3 và M4
 
-Nhánh `m3-m4` dùng chung ứng dụng TypeScript cho web và Capacitor. Backend cung cấp REST JSON dưới `/api/v1`. Màn hình nối API ở `/operations`; URL `/?operations=1` mở cùng màn hình từ bản web đóng gói. Giao diện nguyên mẫu ở trang chủ giữ dữ liệu minh họa của các phân hệ khác.
+Nhánh `m3-m4` dùng chung ứng dụng TypeScript cho web và Capacitor. Backend cung cấp REST JSON dưới `/api/v1`. Các màn hình M3/M4 trong giao diện PikePike tại `/` gọi trực tiếp API. Trang đăng nhập xác minh mã phiên bằng `GET /api/v1/me` và lấy vai trò từ server. Các luồng M1/M2 khác vẫn cần backend của phân hệ tương ứng.
 
 ## Chạy dev
 
@@ -9,7 +9,7 @@ Yêu cầu Node.js 24, npm, Docker Compose và PostgreSQL 17 (Compose có sẵn 
 1. Tạo `.env` từ `.env.example` và đặt mật khẩu dev cùng `IOT_KEY` nếu cần gửi bản tin thiết bị. Giữ `DATABASE_URL` đồng bộ với mật khẩu.
 2. Chạy `npm ci`, `docker compose up -d db`, `npm run migrate -w server` và `npm run build -w server`.
 3. Chạy `npm run seed -w server`. Lệnh tạo dữ liệu demo và in token một ngày cho `SV01`, `OP01`, `TECH01`. Chạy lại seed sẽ thay token demo.
-4. Chạy `npm run dev -w server` và `npm run dev` trong hai terminal. Mở [màn hình vận hành](http://127.0.0.1:5173/operations) và nhập token phù hợp. Kiểm tra API qua [OpenAPI](http://127.0.0.1:3000/api/v1/openapi.json).
+4. Chạy `npm run dev -w server` và `npm run dev` trong hai terminal. Mở [PikePike](http://127.0.0.1:5173/) và nhập mã phiên tương ứng với vai trò cần thử. Kiểm tra API qua [OpenAPI](http://127.0.0.1:3000/api/v1/openapi.json).
 
 Để chạy cả stack bằng Docker, dùng `docker compose up --build -d` rồi `docker compose exec api npm run seed -w server`. Web nghe trên cổng 8080. Android dùng `VITE_API_BASE_URL` tuyệt đối, build đồng bộ bằng `npm run android:sync` và đóng gói trong Android Studio. Backend thực của M1 và M2 kết nối vào cùng hợp đồng phiên, xe, chỗ đỗ, chuyến đi và giữ chỗ. Dữ liệu seed phục vụ thử M3/M4 độc lập.
 
