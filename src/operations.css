@@ -1,0 +1,10 @@
+.m3m4 {max-width: 52rem; margin: auto; padding: 1rem; color: #18302a; background: #f4fbf8; min-height: 100vh}
+.m3m4 article {margin-block-start: 1rem; padding: 1rem; border: 1px solid #bdcfc7; border-radius: .75rem; background: #fff}
+.m3m4 label {display: block; margin: .75rem 0}
+.m3m4 label input,.m3m4 select {display: block; width: 100%; padding: .55rem; border: 1px solid #81958c; border-radius: .4rem; color: #18302a; background: #fff}
+.m3m4 button {padding: .55rem .75rem; margin: .25rem; border-radius: .45rem; border: 1px solid #477b67; background: #eff8f3; color: #123b2a}
+.m3m4 button[aria-pressed="true"] {background: #195f44; color: #fff}
+.m3m4 button:disabled {opacity: .5}
+.m3m4 pre {white-space: pre-wrap; overflow-wrap: anywhere; background: #f1f5f2; padding: .75rem}
+.m3m4 th,.m3m4 td {padding: .4rem; text-align: left}
+.m3m4 [role="alert"] {color: #8b301e}

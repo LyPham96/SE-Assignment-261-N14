@@ -1,0 +1,32 @@
+name: M3 and M4
+on:
+  pull_request:
+  push:
+    branches: [m3-m4]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pikepike
+          POSTGRES_PASSWORD: test_database
+          POSTGRES_DB: pikepike_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pikepike -d pikepike_test"
+          --health-interval 3s --health-timeout 3s --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgres://pikepike:test_database@localhost:5432/pikepike_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run build -w server
+      - run: npm run test -w server

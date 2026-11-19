@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pikepike
+      POSTGRES_USER: pikepike
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pikepike -d pikepike"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build:
+      context: .
+      target: api
+    command: ["npm", "run", "migrate", "-w", "server"]
+    environment:
+      DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db:5432/pikepike
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db:5432/pikepike
+      IOT_KEY: ${IOT_KEY:-}
+      USE_REAL_IOT: ${USE_REAL_IOT:-false}
+      DEMO_IOT: ${DEMO_IOT:-false}
+      CHARGING_BATTERY_WEIGHT: ${CHARGING_BATTERY_WEIGHT:-1}
+      CHARGING_WAIT_WEIGHT: ${CHARGING_WAIT_WEIGHT:-1}
+      CHARGING_OVERLOAD_RATIO: ${CHARGING_OVERLOAD_RATIO:-0.95}
+      SIM_BATTERY_PCT_PER_KM: ${SIM_BATTERY_PCT_PER_KM:-1}
+      SIM_KM_PER_MINUTE: ${SIM_KM_PER_MINUTE:-0.25}
+      SCENARIO_MAX_INTENSITY: ${SCENARIO_MAX_INTENSITY:-500}
+      SCENARIO_MIN_DURATION: ${SCENARIO_MIN_DURATION:-5}
+      SCENARIO_MAX_DURATION: ${SCENARIO_MAX_DURATION:-240}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000"
+  web:
+    build:
+      context: .
+      target: web
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8080:80"
+volumes:
+  pgdata:
