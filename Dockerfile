@@ -16,6 +16,9 @@ COPY server/package.json server/
 RUN npm ci --omit=dev
 COPY --from=build /app/server/dist ./server/dist
 COPY server/migrations ./server/migrations
+COPY server/migrations-m1-m2 ./server/migrations-m1-m2
+COPY server/src/*.mjs ./server/src/
+COPY server/config ./server/config
 COPY server/schema.mjs ./server/schema.mjs
 USER node
 EXPOSE 3000

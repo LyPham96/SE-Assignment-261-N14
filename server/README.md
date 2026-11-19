@@ -1,5 +1,9 @@
 # Chạy M3 và M4
 
+Sau khi merge `origin/thuyen`, màn hình M1/M2 có tại `/?mode=m1-m2` và dùng API `/api` trên cổng 3001. M3/M4 tiếp tục dùng `/api/v1` trên cổng 3000. Hai hệ thống dùng phiên và dữ liệu vận hành riêng.
+
+Trong dev, chạy `docker compose up -d db-m1-m2`, đặt `M1_M2_DATABASE_URL`, rồi chạy `npm run db:migrate`, `npm run db:seed` và `npm run api:start`. Khi chạy toàn stack bằng Compose, migrate M1/M2 tự chạy; có thể nạp dữ liệu dev bằng `docker compose exec api-m1-m2 npm run seed:m1-m2 -w server`. Các lệnh migration/seed M3/M4 vẫn dùng như hướng dẫn bên dưới.
+
 Nhánh `m3-m4` dùng chung ứng dụng TypeScript cho web và Capacitor. Backend cung cấp REST JSON dưới `/api/v1`. Các màn hình M3/M4 trong giao diện PikePike tại `/` gọi trực tiếp API. Trang đăng nhập xác minh mã phiên bằng `GET /api/v1/me` và lấy vai trò từ server. Các luồng M1/M2 khác vẫn cần backend của phân hệ tương ứng.
 
 ## Chạy dev

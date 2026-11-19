@@ -1,5 +1,7 @@
 # PikePike
 
+Sau khi ghép M1–M2 và M3–M4, mở `/` để vào giao diện vận hành ban đầu, hoặc `/?mode=m1-m2` để vào giao diện đăng nhập và đặt xe của M1–M2. Xem [hướng dẫn dựng hai API và hai cơ sở dữ liệu](server/README.md).
+
 ## Cài đặt giao diện và ngôn ngữ
 
 Bấm bánh răng trên thanh đầu trang để mở hồ sơ tài khoản và Cài đặt. Chế độ Sáng/Tối và Việt/Anh áp dụng cho toàn bộ app, ghi nhớ bằng localStorage. Không thêm nghiệp vụ thanh toán.
@@ -17,7 +19,7 @@ Mockup tương tác Smart E-Mobility Hub, React + TypeScript, lấy hướng thi
 npm install
 npm run dev
 ```
-Mở http://127.0.0.1:5173. Trên desktop, chọn một trong 24 màn hình bằng danh mục bên trái. Trên điện thoại, dùng các nút trong luồng và thanh điều hướng. Đổi vai trò tại màn hình đăng nhập để vào vận hành.
+Mở http://127.0.0.1:5173. Các màn hình vận hành lấy vai trò từ phiên do máy chủ xác thực. Dựng backend theo hướng dẫn ở trên trước khi dùng các chức năng gọi API.
 
 ## Kiểm tra / chụp ảnh
 ```sh

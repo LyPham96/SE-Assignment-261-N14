@@ -7,3 +7,5 @@ android/.gradle/
 android/local.properties
 mockups/reference-*.png
 mockups/check-*.png
+test-results/
+playwright-report/
