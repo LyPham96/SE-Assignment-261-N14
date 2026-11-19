@@ -30,6 +30,7 @@ services:
       target: api
     environment:
       DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db:5432/pikepike
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       IOT_KEY: ${IOT_KEY:-}
       USE_REAL_IOT: ${USE_REAL_IOT:-false}
       DEMO_IOT: ${DEMO_IOT:-false}
@@ -45,6 +46,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      migrate-m1-m2:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:3000:3000"
   web:
@@ -53,40 +56,18 @@ services:
       target: web
     depends_on:
       - api
-      - api-m1-m2
     ports:
       - "127.0.0.1:8080:80"
-  db-m1-m2:
-    image: postgres:17
-    environment:
-      POSTGRES_DB: pikepike
-      POSTGRES_USER: pikepike
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    ports:
-      - "127.0.0.1:54329:5432"
-    volumes:
-      - pgdata_m1_m2:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pikepike -d pikepike"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
-
-  api-m1-m2:
+  migrate-m1-m2:
     build:
       context: .
       target: api
-    command: ["sh", "-c", "npm run migrate:m1-m2 -w server && exec npm run start:m1-m2 -w server"]
+    command: ["npm", "run", "migrate:m1-m2", "-w", "server"]
     environment:
-      M1_M2_DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db-m1-m2:5432/pikepike
-      PORT: 3001
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db:5432/pikepike
     depends_on:
-      db-m1-m2:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:3001:3001"
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
-  pgdata_m1_m2:

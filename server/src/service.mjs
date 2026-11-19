@@ -15,6 +15,52 @@ const fail = (status, code, message) => { throw new Problem(status, code, messag
 const plusMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000);
 const publicUser = user => ({ id: user.id, name: user.name, username: user.username, role: user.role });
 
+export class LoginSession {
+  constructor(userId, now) {
+    this.userId=userId;
+    this.token=newToken();
+    this.tokenHash=hashToken(this.token);
+    this.expiresAt=plusMinutes(now,rules.sessionMinutes);
+  }
+}
+
+export class BoDieuKhienXacThuc {
+  static create(pool) { return createService(pool); }
+  constructor(service) { this.service=service; }
+  dangNhap(username,password) { return this.service.login(username,password); }
+  kiemTraPhien(token) { return this.service.authenticate(token); }
+  dangXuat(token,user) { return this.service.logout(token,user); }
+}
+
+export class DieuKhienDatCho {
+  constructor(service) { this.service=service; }
+  yeuCauDatXe(maSV,maXe,maHubDichTuyChon) { return this.service.reserve(maSV,maXe,maHubDichTuyChon); }
+  huyDatCho(maSV,maDatCho) { return this.service.cancel(maSV,maDatCho); }
+}
+
+export class CSDLTaiNguyen {
+  constructor(service) { this.service=service; }
+  fetchAllHubsStatus() { return this.service.hubs(); }
+  layDanhSachXe(maHub) { return this.service.vehicles(maHub); }
+}
+
+export class BoDinhThoi {
+  constructor(service,onError) { this.service=service;this.onError=onError; }
+  start() {
+    if(this.timer)return;
+    const scan=async()=>{
+      if(this.scanning)return;
+      this.scanning=true;
+      try {await this.service.expire()} catch(error) {this.onError(error)}
+      finally {this.scanning=false}
+    };
+    this.timer=setInterval(scan,rules.schedulerMilliseconds);
+    this.timer.unref();
+    void scan();
+  }
+  stop() {clearInterval(this.timer);this.timer=undefined;}
+}
+
 export async function createService(pool, clock = () => new Date(), fault = async () => {}) {
   const dummyHash = await hashPassword(randomUUID());
   const audit = (db, actor, action, entity, now) => db.query('INSERT INTO audit_logs(actor_id,action,entity_id,created_at) VALUES($1,$2,$3,$4)', [actor, action, entity, now]);
@@ -58,13 +104,13 @@ export async function createService(pool, clock = () => new Date(), fault = asyn
           await audit(db, user.id, 'LOGIN_FAILED', user.id, now);
           return locked ? new Problem(423, 'LOGIN_LOCKED', 'Sai mật khẩu 5 lần. Vui lòng thử lại sau 15 phút.') : denied;
         }
-        const token = newToken();
+        const session = new LoginSession(user.id,now);
         const removed = await db.query('DELETE FROM sessions WHERE user_id=$1', [user.id]);
         if (removed.rowCount) await audit(db, user.id, 'SESSION_REVOKED', user.id, now);
-        await db.query('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)', [hashToken(token), user.id, plusMinutes(now, rules.sessionMinutes)]);
+        await db.query('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)', [session.tokenHash,session.userId,session.expiresAt]);
         await db.query('UPDATE users SET failed_logins=0,login_locked_until=NULL WHERE id=$1', [user.id]);
         await audit(db, user.id, 'LOGIN_SUCCEEDED', user.id, now);
-        return { token, user: publicUser(user) };
+        return { token: session.token, user: publicUser(user) };
       });
       if (result instanceof Problem) throw result;
       return result;
@@ -121,6 +167,10 @@ export async function createService(pool, clock = () => new Date(), fault = asyn
         await lockHubs(db, [initial.hub_id, destinationHubId]);
         const { rows: [vehicle] } = await db.query('SELECT * FROM vehicles WHERE id=$1 FOR UPDATE', [vehicleId]);
         if (vehicle.status !== 'SAN_SANG' || vehicle.battery < rules.minimumBattery) fail(409, 'INVALID_VEHICLE', 'Xe vừa được đặt hoặc không đủ điều kiện. Vui lòng chọn xe khác.');
+        const {rows:[schema]} = await db.query("SELECT to_regclass('charging_request') AS charging");
+        if (schema.charging && (await db.query("SELECT id FROM charging_request WHERE \"vehicleId\"=$1 AND status IN ('DA_XEP_LICH','DANG_SAC')",[vehicleId])).rowCount) {
+          fail(409,'INVALID_VEHICLE','Xe đang có lịch sạc.');
+        }
         let destinationSpot = null;
         if (destinationHubId) {
           const { rows: [counts] } = await db.query("SELECT count(*)::int AS total,count(*) FILTER (WHERE status <> 'EMPTY')::int AS used FROM spots WHERE hub_id=$1", [destinationHubId]);

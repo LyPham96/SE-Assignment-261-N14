@@ -37,7 +37,7 @@ export class Notification {
 export type Vehicle = {id: string; hubId: string; status: 'AVAILABLE' | 'RESERVED' | 'IN_USE' | 'CHARGING' | 'REBALANCING' | 'BROKEN'; battery: number; ownerId?: string; approved?: boolean; spotId?: string};
 export type ParkingSpot = {id: string; hubId: string; status: 'EMPTY' | 'RESERVED' | 'OCCUPIED'; holder?: string; vehicleId?: string};
 export type Hub = {id: string; name: string; expectedDemand: number; compatiblePrivateVehicles: boolean; distances?: Record<string, number>};
-export type User = {id: string; role: 'STUDENT' | 'OPERATOR' | 'TECHNICIAN'; sessionHash?: string; sessionExpiresAt?: number};
+export type User = {id: string; role: 'STUDENT' | 'OPERATOR' | 'TECHNICIAN' | 'ADMIN'; sessionHash?: string; sessionExpiresAt?: number};
 export type Reservation = {id: string; hubId: string; userId: string; active: boolean};
 export type Trip = {id: string; userId: string; vehicleId: string; hubId: string; active: boolean; endedAt?: number};
 export type BanTinTrangThai = {maTaiNguyen: string; loaiTaiNguyen: LoaiTaiNguyen; trangThai: string; mucPin?: number; thoiDiem: number; nguon: 'IOT_THAT' | 'MO_PHONG'; maHub?: string};

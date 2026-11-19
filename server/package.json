@@ -9,7 +9,6 @@
     "test": "tsx --test src/*.test.ts",
     "migrate": "node-pg-migrate up -m migrations --envPath ../.env",
     "seed": "node --env-file-if-exists=../.env dist/seed.js",
-    "start:m1-m2": "node --env-file-if-exists=../.env src/start.mjs",
     "migrate:m1-m2": "node --env-file-if-exists=../.env src/migrate.mjs",
     "seed:m1-m2": "node --env-file-if-exists=../.env src/seed.mjs",
     "test:m1-m2": "node --test --test-concurrency=1 test/*.test.mjs"

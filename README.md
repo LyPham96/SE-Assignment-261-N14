@@ -1,6 +1,6 @@
 # PikePike
 
-Sau khi ghép M1–M2 và M3–M4, mở `/` để vào giao diện vận hành ban đầu, hoặc `/?mode=m1-m2` để vào giao diện đăng nhập và đặt xe của M1–M2. Xem [hướng dẫn dựng hai API và hai cơ sở dữ liệu](server/README.md).
+Mở `/` để đăng nhập và dùng các màn hình M1–M4. Xem [hướng dẫn dựng backend và PostgreSQL](server/README.md).
 
 ## Cài đặt giao diện và ngôn ngữ
 

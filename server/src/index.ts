@@ -3,12 +3,15 @@ import {Worker} from 'node:worker_threads';
 import {pathToFileURL} from 'node:url';
 import Fastify, {type FastifyError, type FastifyRequest} from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import pg from 'pg';
 import {Database, type DuLieuKiemTraSac} from './Database.js';
 import {DomainError, requireRule, type BanTinTrangThai, type LoaiTaiNguyen, type ScenarioParams, HubMetricRecord} from './domain.js';
 import {ChargingService, IncidentService, MonitoringService, DichVuCanhBao, IoTGateway, ResourceService} from './m3.js';
 import {RebalancingController, ReportController, ScenarioController, SimulationController, SimulationResultController, RecommendationController, type CreateOrderCommand, type ReportFilter} from './m4.js';
+import {BoDieuKhienXacThuc,BoDinhThoi} from '../src/service.mjs';
+import {registerM1M2Routes} from '../src/app.mjs';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const string = {type: 'string', minLength: 1};
@@ -24,11 +27,17 @@ const scenarioSchema = object(scenarioProps, scenarioRequired);
 const report = object({hubIds: strings, window: object({start: number, end: number})}, ['window']);
 
 type Endpoint = (db: Database, input: Record<string, any>, params: Record<string, string>) => unknown;
-export async function createServer(pool: pg.Pool) {
+export async function createServer(pool: pg.Pool, service = BoDieuKhienXacThuc.create(pool)) {
   const app = Fastify({logger: true});
+  const m1m2 = await service;
+  const authenticate = new BoDieuKhienXacThuc(m1m2);
   const origins = (process.env.CORS_ORIGINS ?? '').split(',').map(origin => origin.trim()).filter(Boolean);
-  await app.register(cors, {origin: origins});
+  await app.register(cors, {origin: origins, credentials:true});
+  await app.register(cookie);
   await app.register(swagger, {openapi: {info: {title: 'PikePike M3 / M4', version: '1.0.0'}, components: {securitySchemes: {bearer: {type: 'http', scheme: 'bearer'}, device: {type: 'apiKey', name: 'X-IoT-Key', in: 'header'}}}}});
+  await app.register(async child=>{
+    await registerM1M2Routes(child,{pool,service:m1m2,secureCookies:process.env.COOKIE_SECURE==='true'});
+  });
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof DomainError) {
       const code = error.code;
@@ -59,8 +68,18 @@ export async function createServer(pool: pg.Pool) {
           const supplied = request.headers['x-iot-key'];
           requireRule(configured && typeof supplied === 'string' && timingSafeEqual(Buffer.from(digest(configured)), Buffer.from(digest(supplied))), 'UNAUTHENTICATED');
         }
+        let cookieActor: string | undefined;
+        if (!options.device && request.cookies.pikepike_session) {
+          if (method !== 'GET') requireRule(request.headers['x-pikepike-request']==='1','FORBIDDEN');
+          try { cookieActor = (await authenticate.kiemTraPhien(request.cookies.pikepike_session)).id; }
+          catch (error) {
+            if ((error as {status?:number}).status === 401) throw new DomainError('UNAUTHENTICATED');
+            throw error;
+          }
+        }
         const result = await Database.transaction(pool, '', db => {
-          const identity = options.device ? 'SYSTEM' : actor(request, db);
+          const identity = options.device ? 'SYSTEM' : cookieActor ?? actor(request, db);
+          if (cookieActor) requireRule(db.state.users.some(user=>user.id===cookieActor),'UNAUTHENTICATED');
           const scoped = new Database(db.state, db.now, identity);
           return handler(scoped, (method === 'GET' ? request.query : request.body) as Record<string, any> ?? {}, request.params as Record<string, string> ?? {});
         });
@@ -147,7 +166,9 @@ export async function createServer(pool: pg.Pool) {
 async function start() {
   requireRule(process.env.DATABASE_URL, 'DATABASE_URL_REQUIRED');
   const pool = new pg.Pool({connectionString: process.env.DATABASE_URL, max: 8});
-  const app = await createServer(pool);
+  const m1m2 = BoDieuKhienXacThuc.create(pool);
+  const app = await createServer(pool,m1m2);
+  const expiration = new BoDinhThoi(await m1m2,error=>app.log.error(error));
   await Database.transaction(pool,'SYSTEM',db => {
     for (const run of db.state.runs) {
       if (run.status !== 'RUNNING' || !run.workerStartedAt) continue;
@@ -221,6 +242,7 @@ async function start() {
     finally { working = false; }
   }
   await app.listen({host: process.env.HOST ?? '127.0.0.1',port: Number(process.env.PORT ?? 3000)});
+  expiration.start();
   const jobs = setInterval(() => { void runNext(); },250);
   const telemetry = setInterval(() => {
     if (process.env.DEMO_IOT !== 'true' || process.env.USE_REAL_IOT === 'true') return;
@@ -239,6 +261,7 @@ async function start() {
   },60_000);
   for (const signal of ['SIGINT','SIGTERM'] as const) process.once(signal, async () => {
     clearInterval(jobs);
+    expiration.stop();
     clearInterval(telemetry);
     clearInterval(alerts);
     if (active) await active.terminate();

@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import type {Pool} from 'pg';
 import {definitions, sqlIdentifier} from '../schema.mjs';
 import * as d from './domain.js';
+import {loadSharedNetwork} from './shared-network.js';
 
 const models = {
   points: d.ChargingPoint, requests: d.ChargingRequest, sessions: d.ChargingSession,
@@ -48,7 +49,9 @@ export class Database {
       }
       const before = new Map(rows.map(row => [row.collection + ':' + row.entity_key, JSON.stringify(row.payload)]));
       const now = Date.now();
+      const saveSharedNetwork = await loadSharedNetwork(client,state);
       const result = await operation(new Database(state, () => now, actor));
+      await saveSharedNetwork?.();
       for (const collection of collections) {
         const [table, columns] = definitions[collection];
         const fields = Object.entries(columns);

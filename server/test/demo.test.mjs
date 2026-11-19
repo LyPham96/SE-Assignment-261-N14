@@ -6,7 +6,7 @@ import { migrate } from '../src/migrate.mjs';
 import { seed } from '../src/seed.mjs';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-if (!databaseUrl || new URL(databaseUrl).pathname !== '/pikepike_test') throw new Error('TEST_DATABASE_URL must point to the isolated pikepike_test database');
+if (!databaseUrl || !/^\/pikepike_test(?:_[a-f0-9]{32})?$/.test(new URL(databaseUrl).pathname)) throw new Error('TEST_DATABASE_URL must point to an isolated pikepike_test database');
 const pool = createPool(databaseUrl);
 let app;
 let now;

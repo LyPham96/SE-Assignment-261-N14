@@ -1,7 +1,7 @@
 import pg from 'pg';
 
-export function createPool(connectionString = process.env.M1_M2_DATABASE_URL) {
-  if (!connectionString) throw new Error('M1_M2_DATABASE_URL is required');
+export function createPool(connectionString = process.env.DATABASE_URL) {
+  if (!connectionString) throw new Error('DATABASE_URL is required');
   return new pg.Pool({ connectionString, max: 10, connectionTimeoutMillis: 5000 });
 }
 
@@ -9,6 +9,7 @@ export async function transaction(pool, work) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(320304)');
     const result = await work(client);
     await client.query('COMMIT');
     return result;

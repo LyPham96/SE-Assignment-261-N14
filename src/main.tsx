@@ -1,87 +1,537 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowLeft, ArrowRight, Bell, Bike, BatteryCharging, MapPin, Home, Ticket, Zap, LayoutDashboard, Search, ChevronRight, Check, AlertTriangle, QrCode, X, SlidersHorizontal, Play, Truck, Wrench, Clock, Signal, Wifi, Battery, Settings, Plus, CheckCircle2, Navigation, User, Sun } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  Bike,
+  Home,
+  Ticket,
+  Zap,
+  LayoutDashboard,
+  ChevronRight,
+  Play,
+  Truck,
+  Signal,
+  Wifi,
+  Battery,
+  Settings,
+  CheckCircle2,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import './style.css';
 import './glass.css';
 import './mobile.css';
 import './blue.css';
-import { Explore } from './layouts';
 import { Settings as SettingsPage, usePreferences } from './preferences';
-import { translate } from './translations';
-import Demo from './demo/Demo';
-import {createApi,LiveScreens,liveScreens,type Api,type Identity,type LiveScreen} from './live-screens';
+import { api as accountApi } from './account-api';
+import { GiaoDienHub, studentScreens } from './student-screens';
+import {
+  createApi,
+  OperationsUI,
+  liveScreens,
+  type Api,
+  type Identity,
+  type LiveScreen,
+} from './live-screens';
 
 const screens = [
- ['login','Đăng nhập / vai trò','M1'],['settings','Cài đặt','M1'],['home','Tìm Hub','M2'],['hub','Tài nguyên tại Hub','M2'],['vehicle','Chọn xe dùng chung','M2'],['book','Xác nhận đặt xe','M2'],['parking','Đặt chỗ đỗ cá nhân','M2'],['charge','Đăng ký sạc','M3'],['reservations','Đặt chỗ của tôi','M2'],['edit','Sửa đặt chỗ','M2'],['cancel','Hủy đặt chỗ','M2'],['unlock','Nhận xe QR / mã','M2'],['trip','Chuyến đi hiện tại','M2'],['return','Trả xe','M2'],['report','Báo sự cố','M3'],['dashboard','Toàn mạng vận hành','M3'],['resources','Xe, chỗ đỗ & cổng sạc','M3'],['alerts','Cảnh báo vận hành','M3'],['incident','Xử lý sự cố','M3'],['schedule','Lập lịch sạc thông minh','M3'],['transfer','Điều chuyển xe','M4'],['scenario','Tạo kịch bản What-if','M4'],['simulation','Chạy mô phỏng','M4'],['results','Kết quả & khuyến nghị','M4'],['apply','Xác nhận áp dụng','M4'],['operationsReport','Báo cáo vận hành','M4'],['notifications','Thông báo','M3']
+  ['login', 'Đăng nhập / vai trò', 'M1'],
+  ['settings', 'Cài đặt', 'M1'],
+  ['home', 'Tìm Hub', 'M2'],
+  ['hub', 'Tài nguyên tại Hub', 'M2'],
+  ['vehicle', 'Chọn xe dùng chung', 'M2'],
+  ['book', 'Xác nhận đặt xe', 'M2'],
+  ['parking', 'Đặt chỗ đỗ cá nhân', 'M2'],
+  ['charge', 'Đăng ký sạc', 'M3'],
+  ['reservations', 'Đặt chỗ của tôi', 'M2'],
+  ['edit', 'Sửa đặt chỗ', 'M2'],
+  ['cancel', 'Hủy đặt chỗ', 'M2'],
+  ['unlock', 'Nhận xe QR / mã', 'M2'],
+  ['trip', 'Chuyến đi hiện tại', 'M2'],
+  ['return', 'Trả xe', 'M2'],
+  ['report', 'Báo sự cố', 'M3'],
+  ['dashboard', 'Toàn mạng vận hành', 'M3'],
+  ['resources', 'Xe, chỗ đỗ & cổng sạc', 'M3'],
+  ['alerts', 'Cảnh báo vận hành', 'M3'],
+  ['incident', 'Xử lý sự cố', 'M3'],
+  ['schedule', 'Lập lịch sạc thông minh', 'M3'],
+  ['transfer', 'Điều chuyển xe', 'M4'],
+  ['scenario', 'Tạo kịch bản What-if', 'M4'],
+  ['simulation', 'Chạy mô phỏng', 'M4'],
+  ['results', 'Kết quả & khuyến nghị', 'M4'],
+  ['apply', 'Xác nhận áp dụng', 'M4'],
+  ['operationsReport', 'Báo cáo vận hành', 'M4'],
+  ['notifications', 'Thông báo', 'M3'],
 ] as const;
-type Screen = typeof screens[number][0];
-const hubs = [{name:'Ga Metro ĐHQG',distance:'350 m',bikes:12,spots:8,charge:4},{name:'Ký túc xá khu A',distance:'1,2 km',bikes:8,spots:14,charge:2},{name:'ĐH Bách Khoa',distance:'2,4 km',bikes:6,spots:3,charge:1}];
-function App(){
- const {theme,setTheme,language,setLanguage}=usePreferences();
- const [screen,setScreen]=useState<Screen>((new URLSearchParams(location.search).get('screen') as Screen)||'login');
- useEffect(()=>{document.documentElement.dataset.screen=screen;return()=>{delete document.documentElement.dataset.screen}},[screen]);
- const [session,setSession]=useState<{api:Api;me:Identity}>();
- const [token,setToken]=useState('');
- const [loginError,setLoginError]=useState('');
- const [loggingIn,setLoggingIn]=useState(false);
- async function signIn(){
-   if(!token.trim()||loggingIn)return;
-   setLoginError('');setLoggingIn(true);
-   try {
-     const api=createApi(token.trim());
-     const me=await api<Identity>('/me');
-     setSession({api,me});setToken('');
-     setRole({STUDENT:'Sinh viên',OPERATOR:'Vận hành',TECHNICIAN:'Kỹ thuật'}[me.role]);
-     go(me.role==='STUDENT'?'home':'dashboard');
-   } catch(error) {
-     setLoginError(error instanceof Error?error.message:'Không thể kết nối máy chủ.');
-   } finally {setLoggingIn(false);}
- }
- const [role,setRole]=useState('Sinh viên'); const [filter,setFilter]=useState('Tất cả'); const [toast,setToast]=useState(''); const [hub,setHub]=useState(hubs[0]); const [cancelled,setCancelled]=useState(false); const [code,setCode]=useState(''); const [reserved,setReserved]=useState(false);
- const [settingsOrigin,setSettingsOrigin]=useState<Screen>('home');
- const go=(s:Screen)=>{if(s==='settings'){setSettingsOrigin(operational?'dashboard':'home')}setScreen(s);history.replaceState(null,'',`?screen=${s}`);document.querySelector('.scroll')?.scrollTo(0,0)};
- const notify=(s:string)=>{setToast(s);window.setTimeout(()=>setToast(''),3200)};
- const action=(text:string,next?:Screen)=>{notify(text);if(next)go(next)};
- const button=(label:string,fn:()=>void,icon:LucideIcon=ArrowRight,secondary=false)=>{const Icon=icon;return <button className={secondary?'btn secondary':'btn'} onClick={fn}>{label}<Icon size={17}/></button>};
- const field=(label:string,element:React.ReactNode)=><label className="field"><span>{label}</span>{element}</label>;
- const input=(value:string,type='text')=><input type={type} defaultValue={language==='en'?translate(value):value}/>;
- const select=(values:string[])=><select defaultValue={values[0]}>{values.map(v=><option key={v}>{v}</option>)}</select>;
- const title=(eyebrow:string,name:string,sub:string)=>{const labels:Partial<Record<Screen,string>>={login:'Đăng nhập PikePike',vehicle:'Chọn xe',book:'Xác nhận đặt xe',parking:'Đặt chỗ đỗ',charge:'Đăng ký sạc',reservations:'Đặt chỗ của tôi',edit:'Sửa đặt chỗ',cancel:'Hủy đặt xe?',unlock:'Nhận xe',trip:'Chuyến đi hiện tại',return:'Trả xe',report:'Báo sự cố',incident:'Chi tiết sự cố',transfer:'Điều chuyển xe',scenario:'Tạo kịch bản',simulation:'Chạy mô phỏng',results:'Kết quả mô phỏng',apply:'Duyệt phương án',operationsReport:'Báo cáo vận hành',notifications:'Thông báo'};return <div className="page-title"><span className="eyebrow">{eyebrow}</span><h1>{labels[screen]||name}</h1><p>{sub}</p></div>};
- const section=(name:string,link?:string,fn?:()=>void)=><div className="section"><h2>{name}</h2>{link&&<button onClick={fn}>{link}<ChevronRight size={13}/></button>}</div>;
- const badge=(text:string,warn=false)=><span className={warn?'badge warn':'badge'}>{text}</span>;
- const row=(Icon:LucideIcon,label:string,value:string)=><div className="info-row"><span><Icon size={16}/>{label}</span><strong>{value}</strong></div>;
- const summary=(kind='Xe dùng chung')=><div className="card summary"><span className="eyebrow">THÔNG TIN ĐẶT CHỖ</span><h3>{kind}</h3>{row(MapPin,'Hub',hub.name)}{row(Clock,'Thời gian','09:45 · Hôm nay')}{row(Ticket,'Mã đặt chỗ','PK-0248')}{badge('Giữ chỗ 15 phút')}</div>;
- const hubCard=(h:typeof hubs[number])=><button key={h.name} className="card hub-card" onClick={()=>{setHub(h);go('hub')}}><div className="hub-symbol"><MapPin size={22}/></div><div><h3>{h.name}</h3><p>{h.distance} · Đang mở cửa</p><div className="mini-stats"><span><Bike size={13}/>{h.bikes} xe</span><span>Ⓟ {h.spots} chỗ</span><span><Zap size={13}/>{h.charge} sạc</span></div></div><ChevronRight size={17}/></button>;
- const bikeArt=(small=false)=><img className={small?'bike-art small':'bike-art'} src="/images/vehicle.png" alt="Xe máy điện VinFast Klara màu đỏ"/>;
- const isLive=liveScreens.includes(screen as LiveScreen);
- const operational=(screen==='settings'&&role!=='Sinh viên')||(isLive&&!['charge','report','notifications'].includes(screen))||(screen==='notifications'&&role!=='Sinh viên');
- let content:React.ReactNode;
- switch(screen){
- case 'login': content=<>{title('ĐI XANH MỖI NGÀY','Chào bạn,\nPikePike đây!','Một chạm kết nối hành trình trong khu đô thị ĐHQG.')}<div className="hero login-hero"><div><span className="eyebrow">SMART E-MOBILITY</span><h2>Đi gần hơn.<br/>Sống xanh hơn.</h2><span className="hero-tag">Cùng PikePike ↗</span></div>{bikeArt()}</div><form className="card" onSubmit={event=>{event.preventDefault();void signIn();}}>{field('Mã phiên PikePike',<input type="password" autoComplete="current-password" value={token} onChange={event=>setToken(event.target.value)}/>)}{loginError&&<p role="alert">{loginError}</p>}<button className="btn" disabled={loggingIn||!token.trim()}>{loggingIn?'Đang đăng nhập…':'Đăng nhập'}<ArrowRight size={17}/></button></form><a className="text-btn" href="/?mode=m1-m2">Đặt xe · M1–M2</a></>; break;
- case 'home': content=<><div className="search"><Search size={17}/><input placeholder="Bạn muốn đến Hub nào?" onChange={e=>setFilter(e.target.value||'Tất cả')}/><SlidersHorizontal size={17}/></div><div className="hero"><div><span className="eyebrow">PIKEPIKE · ĐHQG-HCM</span><h1>Đi xanh,<br/>đến thật gần.</h1><p>Xe điện sẵn sàng.<br/>Hành trình theo cách bạn.</p><button onClick={()=>go('vehicle')}>Tìm xe ngay <ArrowRight size={14}/></button></div>{bikeArt()}</div>{section('Bạn cần gì hôm nay?')}<div className="categories">{[[Bike,'Thuê xe','vehicle'],[MapPin,'Chỗ đỗ','parking'],[Zap,'Sạc xe','charge']].map(([I,n,s])=>{let Icon=I as LucideIcon;return <button key={n as string} onClick={()=>go(s as Screen)}><Icon size={22}/><span>{n as string}</span></button>})}</div>{section('Hub gần bạn','Xem tất cả',()=>setFilter('Tất cả'))}{hubs.filter(h=>filter==='Tất cả'||h.name.toLowerCase().includes(filter.toLowerCase())).map(hubCard)}<div className="note"><Sun size={17}/>Hôm nay bạn chọn một hành trình xanh?</div></>; break;
- case 'hub': content=<>{title('HUB GẦN BẠN',hub.name,'350 m từ vị trí của bạn · Cập nhật vừa xong')}<div className="map"><div className="road r1"/><div className="road r2"/><div className="map-label">ĐẠI HỌC QUỐC GIA</div><span className="map-pin"><MapPin size={26}/></span><span className="map-you">● Bạn</span></div><div className="stats"><div><b>{hub.bikes}</b><span>Xe khả dụng</span></div><div><b>{hub.spots}</b><span>Chỗ đỗ trống</span></div><div><b>{hub.charge}</b><span>Cổng sạc rảnh</span></div></div>{section('Tài nguyên tại Hub')}{button('Chọn xe dùng chung',()=>go('vehicle'),Bike)}{button('Đặt chỗ đỗ cá nhân',()=>go('parking'),MapPin,true)}{button('Đăng ký sạc',()=>go('charge'),Zap,true)}<div className="note"><CheckCircle2 size={18}/>Hub hoạt động bình thường · 24/7</div></>; break;
- case 'vehicle': content=<>{title('XE DÙNG CHUNG','Chọn bạn đồng hành',`${hub.name} · ${hub.bikes} xe sẵn sàng`)}<div className="chips">{['Tất cả','Xe đạp điện','Xe máy điện'].map(f=><button onClick={()=>setFilter(f)} className={filter===f?'active':''} key={f}>{f}</button>)}</div><div className="card vehicle"><div className="vehicle-top">{badge('Sẵn sàng')}<span>♡</span></div>{bikeArt()}<h2>Pike City 01</h2><p>Xe đạp điện · PK-B012</p><div className="vehicle-spec"><span><BatteryCharging size={18}/>86% pin</span><span><Navigation size={18}/>~ 32 km</span></div>{button('Đặt xe này',()=>go('book'))}</div><div className="card compact-vehicle">{bikeArt(true)}<div><h3>Pike {filter==='Xe máy điện'?'Moto':'City'} 02</h3><p>72% pin · ~ 26 km</p><button className="text-btn" onClick={()=>go('book')}>Chọn xe →</button></div></div></>;break;
- case 'book': content=<>{title('ĐẶT XE','Sẵn sàng lên đường?','Kiểm tra thông tin trước khi giữ xe.')}<div className="card vehicle short">{bikeArt()}<h2>Pike City 01</h2><p>PK-B012 · Pin 86% · Sẵn sàng</p></div>{summary() }<div className="note"><Clock size={20}/>Xe được giữ 15 phút. Đến Hub và mở khóa trước 10:00.</div>{button('Xác nhận đặt xe',()=>{setReserved(true);action('Đặt xe thành công · PK-0248','reservations')})}</>;break;
- case 'parking': content=<>{title('XE CÁ NHÂN','Đặt trước chỗ đỗ','Đến nơi, luôn có chỗ dành cho bạn.')}<div className="card">{field('Hub muốn đỗ',select(hubs.map(h=>h.name)))}{field('Xe cá nhân đã duyệt',select(['VinFast Evo · 59X3-246.80']))}<div className="two-fields">{field('Ngày',input('2026-10-15','date'))}{field('Giờ đến',input('10:00','time'))}</div>{field('Giờ rời dự kiến',input('12:00','time'))}</div>{section('Chọn vị trí đỗ')}<div className="parking-grid">{['A01','A02','A03','A04','A05','A06','A07','A08'].map((p,i)=><button disabled={i===2||i===5} key={p} onClick={e=>{document.querySelectorAll('.spot.selected').forEach(x=>x.classList.remove('selected'));e.currentTarget.classList.add('selected')}} className={'spot '+(i===0?'selected':'')}>{p}<Bike size={19}/></button>)}</div><p className="footnote">Xanh: còn trống · Xám: đã có xe · Cam: đang chọn</p>{button('Xác nhận đặt chỗ đỗ',()=>action('Đã đặt chỗ đỗ A01 · 10:00–12:00','reservations'))}</>;break;
- case 'reservations': content=<>{title('HÀNH TRÌNH CỦA BẠN','Đặt chỗ của tôi','Mọi thứ đã sẵn sàng cho chuyến đi.')}<div className="chips"><button className="active">Đang hoạt động</button><button onClick={()=>notify('Chỉ hiển thị đặt chỗ hiện tại trong mockup')}>Đã kết thúc</button></div><div className="card booking-card"><div className="between">{badge(cancelled?'Đã hủy':'Đã giữ xe',cancelled)}<span className="muted">PK-0248</span></div>{bikeArt()}<h2>Pike City 01</h2><p>{hub.name}</p><div className="countdown"><Clock size={17}/>{cancelled?'Tài nguyên đã được giải phóng':'Còn 12:48 để nhận xe'}</div>{!cancelled&&<>{button('Nhận xe ngay',()=>go('unlock'),QrCode)}<div className="split-actions"><button onClick={()=>go('edit')}>Sửa đặt chỗ</button><button className="danger" onClick={()=>go('cancel')}>Hủy đặt chỗ</button></div></>}</div><div className="card"><div className="between"><h3>Chỗ đỗ A01</h3>{badge('Đã xác nhận')}</div><p>VinFast Evo · KTX khu A</p>{row(Clock,'Hôm nay','10:00–12:00')}<button className="text-btn" onClick={()=>go('charge')}>Đăng ký sạc cho xe này →</button></div>{reserved&&<p className="footnote">Đặt xe thành công · Tài nguyên đã được giữ</p>}</>;break;
- case 'edit': content=<>{title('QUẢN LÝ ĐẶT CHỖ','Điều chỉnh kế hoạch','Áp dụng cho đặt chỗ đỗ xe cá nhân PK-0250.')}<div className="card">{field('Hub',select(['Ký túc xá khu A','Ga Metro ĐHQG','ĐH Bách Khoa']))}{field('Ngày đến',input('2026-10-15','date'))}{field('Giờ đến',input('10:30','time'))}{field('Giờ rời',input('12:30','time'))}</div><div className="note"><AlertTriangle size={20}/>Hệ thống kiểm tra lại chỗ trống trước khi lưu thay đổi.</div>{button('Lưu thay đổi',()=>action('Đã cập nhật đặt chỗ đỗ','reservations'))}</>;break;
- case 'cancel': content=<>{title('QUẢN LÝ ĐẶT CHỖ','Bạn muốn hủy đặt xe?','Xe sẽ được trả về danh sách khả dụng.')}<div className="big-symbol"><Ticket size={44}/></div>{summary()}{field('Lý do hủy',select(['Thay đổi kế hoạch','Không còn nhu cầu','Chọn Hub khác']))}{button('Xác nhận hủy đặt chỗ',()=>{setCancelled(true);action('Đã hủy đặt chỗ và giải phóng xe','reservations')},X)}{button('Giữ lại đặt chỗ',()=>go('reservations'),ArrowLeft,true)}</>;break;
- case 'unlock':content=<>{title('NHẬN XE','Quét mã. Lên đường.','Quét QR trên xe PK-B012 tại Hub.')}<div className="scanner"><div className="scan-corner a"/><div className="scan-corner b"/><QrCode size={148} strokeWidth={1}/><span className="scan-line"/><span className="scan-caption">Căn mã QR vào trong khung</span></div><p className="footnote">Khung quét minh họa · Dùng mã để thử mở khóa</p>{field('Hoặc nhập mã mở khóa',<input placeholder="Nhập 6 số · Demo: 248012" value={code} onChange={e=>setCode(e.target.value)} maxLength={6}/>)}{button('Mở khóa & bắt đầu',()=>code==='248012'?action('Mở khóa thành công · Chuyến đi bắt đầu','trip'):notify('Mã không hợp lệ. Mã demo: 248012'),QrCode)}</>;break;
- case 'trip':content=<>{title('ĐANG DI CHUYỂN','Chuyến đi xanh của bạn','Pike City 01 · PK-B012')}<div className="card trip-timer"><span>THỜI GIAN DI CHUYỂN</span><strong>12:34</strong>{badge('Đang sử dụng')}{bikeArt()}</div><div className="stats"><div><b>2,4</b><span>km di chuyển</span></div><div><b>79%</b><span>pin còn lại</span></div><div><b>0,3</b><span>kg CO₂ giảm</span></div></div>{button('Trả xe tại Hub',()=>go('return'),MapPin)}{button('Báo sự cố',()=>go('report'),AlertTriangle,true)}</>;break;
- case 'return':content=<>{title('KẾT THÚC CHUYẾN ĐI','Đến nơi rồi!','Đỗ xe đúng vị trí và xác nhận trả xe.')}<div className="card">{field('Hub trả xe',select(['ĐH Bách Khoa','Ga Metro ĐHQG','Ký túc xá khu A']))}{field('Vị trí đỗ',select(['B03 · Còn trống','B04 · Còn trống']))}{row(Bike,'Phương tiện','Pike City 01')}{row(Clock,'Thời gian','12 phút 34 giây')}{row(BatteryCharging,'Pin khi trả','79%')}</div><div className="note"><CheckCircle2 size={19}/>Kiểm tra khóa xe và không để quên đồ cá nhân.</div>{button('Xác nhận trả xe',()=>action('Trả xe thành công · Cảm ơn bạn đã đi xanh!','home'),Check)}{button('Xe có vấn đề? Báo sự cố',()=>go('report'),AlertTriangle,true)}</>;break;
- case 'settings':content=<><SettingsPage theme={theme} setTheme={setTheme} language={language} setLanguage={setLanguage} role={role}/>{session&&button('Đăng xuất',()=>{setSession(undefined);setRole('Sinh viên');go('login');})}</>;break;
- default:content=null;
- }
- if(screen==='home')content=<Explore hubs={hubs} onHub={h=>{setHub(h);go('hub')}} onNavigate={s=>go(s as Screen)}/>;
- const pageNames:Record<Screen,string>={settings:'Cài đặt',login:'Đăng nhập',home:'Khám phá',hub:hub.name,vehicle:'Chọn xe',book:'Đặt xe',parking:'Đặt chỗ đỗ',charge:'Đăng ký sạc',reservations:'Đặt chỗ của tôi',edit:'Sửa đặt chỗ',cancel:'Hủy đặt chỗ',unlock:'Nhận xe',trip:'Chuyến đi',return:'Trả xe',report:'Báo sự cố',dashboard:'Tổng quan',resources:'Tài nguyên',alerts:'Cảnh báo',incident:'Xử lý sự cố',schedule:'Lịch sạc',transfer:'Điều chuyển',scenario:'Tạo kịch bản',simulation:'Mô phỏng',results:'Kết quả',apply:'Duyệt phương án',operationsReport:'Báo cáo vận hành',notifications:'Thông báo'};
- const formPages=['parking','charge','edit','report','incident','transfer','scenario','apply'];
- if(isLive&&!session)content=<div className="card"><p>Đăng nhập để xem dữ liệu và thao tác vận hành.</p>{button('Về đăng nhập',()=>go('login'))}</div>;
- const parts=React.isValidElement<{children:React.ReactNode}>(content)&&content.type===React.Fragment?React.Children.toArray(content.props.children):[content];
- const primaryIndex=parts.findIndex(child=>React.isValidElement<{className?:string}>(child)&&child.type==='button'&&child.props.className==='btn');
- const primary=primaryIndex>=0?parts[primaryIndex]:null;
- const pinned=primary&&screen!=='login';
- if(pinned)content=<>{parts.filter((_,i)=>i!==primaryIndex)}</>;
- return <div className="studio"><aside className="catalog"><div className="brand"><Bike size={30}/>PikePike<span>ĐIỀU PHỐI DI CHUYỂN</span></div><p>Đi xanh mỗi ngày.<br/>Smart E-Mobility Hub · ĐHQG-HCM</p>{['M1','M2','M3','M4'].map(m=><div key={m}><h4>{m} · {m==='M1'?'Bắt đầu':m==='M2'?'Hành trình sinh viên':m==='M3'?'Sạc & vận hành':'Điều phối & What-if'}</h4>{screens.filter(s=>s[2]===m).map(s=><button key={s[0]} className={screen===s[0]?'current':''} onClick={()=>go(s[0])}>{s[1]}<ChevronRight size={13}/></button>)}</div>)}<small>TypeScript · Android-ready via Capacitor<br/>M1/M2 · Dữ liệu minh họa</small></aside><main className="preview"><div className="preview-label"><span>PIKEPIKE / MOBILE EXPERIENCE</span><b>{screens.find(s=>s[0]===screen)?.[1]}</b></div><div className="phone"><div className="phone-screen"><div className="notch"/><div className="status"><b>9:41</b><span><Signal size={14}/><Wifi size={14}/><Battery size={18}/></span></div><header className="mobile-header"><div className="chrome-row"><button className="icon-button" aria-label="Quay lại" onClick={()=>go(screen==='settings'?settingsOrigin:operational?'dashboard':'home')}><ArrowLeft size={20}/></button><button className="icon-button settings-shortcut" aria-label="Cài đặt" onClick={()=>go('settings')}><Settings size={18}/></button><div className="brand-notification"><button className="header-settings" aria-label="Hồ sơ và cài đặt" onClick={()=>go('settings')}><span>PikePike<i/></span></button><button className="notification" aria-label="Thông báo" onClick={()=>go('notifications')}><Bell size={18}/><i/></button></div></div><div className="title-row"><h1>{pageNames[screen]}</h1>{pinned&&formPages.includes(screen)&&<div className="title-action">{primary}</div>}</div></header><div className="scroll">{isLive&&session?<LiveScreens screen={screen as LiveScreen} api={session.api} me={session.me} go={go} notify={notify}/>:<React.Fragment key={screen}>{content}</React.Fragment>}</div>{pinned&&!formPages.includes(screen)&&<div className="primary-dock">{primary}</div>}{screen!=='login'&&<nav className="bottom-nav">{(operational?[[LayoutDashboard,'Tổng quan','dashboard'],[Zap,'Lịch sạc','schedule'],[Truck,'Điều phối','transfer'],...(session?.me.role==='TECHNICIAN'?[]:[[Play,'What-if','scenario']])]:[[Home,'Trang chủ','home'],[Ticket,'Đặt chỗ','reservations'],[Zap,'Sạc xe','charge'],[Bike,'Chuyến đi','trip']]).map(([I,l,s])=>{let Icon=I as LucideIcon;let active=screen===s;return <button aria-label={l as string} key={s as string} className={active?'active':''} onClick={()=>go(s as Screen)}><Icon size={20}/>{active&&<span>{l as string}</span>}</button>})}</nav>}{toast&&<div className="toast" role="status"><CheckCircle2 size={18}/>{toast}</div>}<div className="home-indicator"/></div></div><div className="preview-footer"><span>Designed for your everyday green ride.</span><span>393 × 852 · iPhone 14 Pro</span></div></main></div>
+type Screen = (typeof screens)[number][0];
+function ManHinhChinh() {
+  const { theme, setTheme, language, setLanguage } = usePreferences();
+  const [screen, setScreen] = useState<Screen>(
+    (new URLSearchParams(location.search).get('screen') as Screen) || 'login',
+  );
+  useEffect(() => {
+    document.documentElement.dataset.screen = screen;
+    return () => {
+      delete document.documentElement.dataset.screen;
+    };
+  }, [screen]);
+  const [session, setSession] = useState<{ api: Api; me: Identity }>();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+  async function signIn() {
+    if (!username.trim() || !password || loggingIn) return;
+    setLoginError('');
+    setLoggingIn(true);
+    try {
+      await accountApi('/auth/login', { username, password });
+      const api = createApi();
+      const me = await api<Identity>('/me');
+      setSession({ api, me });
+      setPassword('');
+      setRole(
+        {
+          STUDENT: 'Sinh viên',
+          OPERATOR: 'Vận hành',
+          TECHNICIAN: 'Kỹ thuật',
+          ADMIN: 'Quản trị',
+        }[me.role],
+      );
+      go(['OPERATOR', 'TECHNICIAN'].includes(me.role) ? 'dashboard' : 'home');
+    } catch (error) {
+      setLoginError(
+        error instanceof Error ? error.message : 'Không thể kết nối máy chủ.',
+      );
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+  const [role, setRole] = useState('Sinh viên');
+  const [toast, setToast] = useState('');
+  const [loginReady, setLoginReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const api = createApi();
+    void api<Identity>('/me')
+      .then(
+        (me) => {
+          if (!active) return;
+          setSession({ api, me });
+          setRole(
+            {
+              STUDENT: 'Sinh viên',
+              OPERATOR: 'Vận hành',
+              TECHNICIAN: 'Kỹ thuật',
+              ADMIN: 'Quản trị',
+            }[me.role],
+          );
+          if (!new URLSearchParams(location.search).has('screen')) {
+            const next =
+              me.role === 'OPERATOR' || me.role === 'TECHNICIAN'
+                ? 'dashboard'
+                : 'home';
+            setScreen(next);
+            history.replaceState(null, '', '?screen=' + next);
+          }
+        },
+        () => {},
+      )
+      .finally(() => {
+        if (active) setLoginReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const [settingsOrigin, setSettingsOrigin] = useState<Screen>('home');
+  const go = (s: Screen) => {
+    if (s === 'settings') {
+      setSettingsOrigin(operational ? 'dashboard' : 'home');
+    }
+    setScreen(s);
+    history.replaceState(null, '', `?screen=${s}`);
+    document.querySelector('.scroll')?.scrollTo(0, 0);
+  };
+  const notify = (s: string) => {
+    setToast(s);
+    window.setTimeout(() => setToast(''), 3200);
+  };
+  const button = (label: string, fn: () => void) => (
+    <button className="btn" onClick={fn}>
+      {label}
+      <ArrowRight size={17} />
+    </button>
+  );
+  const isLive = liveScreens.includes(screen as LiveScreen);
+  const isStudentScreen = studentScreens.includes(
+    screen as (typeof studentScreens)[number],
+  );
+  const operational =
+    (screen === 'settings' && role !== 'Sinh viên') ||
+    (isLive && !['charge', 'report', 'notifications'].includes(screen)) ||
+    (screen === 'notifications' && role !== 'Sinh viên');
+  let content: React.ReactNode;
+  switch (screen) {
+    case 'login':
+      content = (
+        <ManHinhDangNhap
+          username={username}
+          password={password}
+          setUsername={setUsername}
+          setPassword={setPassword}
+          error={loginError}
+          busy={loggingIn || !loginReady}
+          submit={() => void signIn()}
+        />
+      );
+      break;
+    case 'settings':
+      content = (
+        <>
+          <SettingsPage
+            theme={theme}
+            setTheme={setTheme}
+            language={language}
+            setLanguage={setLanguage}
+            role={role}
+          />
+          {session &&
+            button('Đăng xuất', () => {
+              void accountApi('/auth/logout', {}).then(
+                () => {
+                  setSession(undefined);
+                  setRole('Sinh viên');
+                  go('login');
+                },
+                (error) => notify(error.message),
+              );
+            })}
+        </>
+      );
+      break;
+    default:
+      content = null;
+  }
+  const pageNames: Record<Screen, string> = {
+    settings: 'Cài đặt',
+    login: 'Đăng nhập',
+    home: 'Khám phá',
+    hub: 'Tài nguyên tại Hub',
+    vehicle: 'Chọn xe',
+    book: 'Đặt xe',
+    parking: 'Đặt chỗ đỗ',
+    charge: 'Đăng ký sạc',
+    reservations: 'Đặt chỗ của tôi',
+    edit: 'Sửa đặt chỗ',
+    cancel: 'Hủy đặt chỗ',
+    unlock: 'Nhận xe',
+    trip: 'Chuyến đi',
+    return: 'Trả xe',
+    report: 'Báo sự cố',
+    dashboard: 'Tổng quan',
+    resources: 'Tài nguyên',
+    alerts: 'Cảnh báo',
+    incident: 'Xử lý sự cố',
+    schedule: 'Lịch sạc',
+    transfer: 'Điều chuyển',
+    scenario: 'Tạo kịch bản',
+    simulation: 'Mô phỏng',
+    results: 'Kết quả',
+    apply: 'Duyệt phương án',
+    operationsReport: 'Báo cáo vận hành',
+    notifications: 'Thông báo',
+  };
+  const formPages = [
+    'parking',
+    'charge',
+    'edit',
+    'report',
+    'incident',
+    'transfer',
+    'scenario',
+    'apply',
+  ];
+  if ((isLive || isStudentScreen) && !session)
+    content = (
+      <div className="card">
+        <p>Đăng nhập để xem dữ liệu và thao tác vận hành.</p>
+        {button('Về đăng nhập', () => go('login'))}
+      </div>
+    );
+  const parts =
+    React.isValidElement<{ children: React.ReactNode }>(content) &&
+    content.type === React.Fragment
+      ? React.Children.toArray(content.props.children)
+      : [content];
+  const primaryIndex = parts.findIndex(
+    (child) =>
+      React.isValidElement<{ className?: string }>(child) &&
+      child.type === 'button' &&
+      child.props.className === 'btn',
+  );
+  const primary = primaryIndex >= 0 ? parts[primaryIndex] : null;
+  const pinned = primary && screen !== 'login';
+  if (pinned) content = <>{parts.filter((_, i) => i !== primaryIndex)}</>;
+  return (
+    <div className="studio">
+      <aside className="catalog">
+        <div className="brand">
+          <Bike size={30} />
+          PikePike<span>ĐIỀU PHỐI DI CHUYỂN</span>
+        </div>
+        <p>
+          Đi xanh mỗi ngày.
+          <br />
+          Smart E-Mobility Hub · ĐHQG-HCM
+        </p>
+        {['M1', 'M2', 'M3', 'M4'].map((m) => (
+          <div key={m}>
+            <h4>
+              {m} ·{' '}
+              {m === 'M1'
+                ? 'Bắt đầu'
+                : m === 'M2'
+                  ? 'Hành trình sinh viên'
+                  : m === 'M3'
+                    ? 'Sạc & vận hành'
+                    : 'Điều phối & What-if'}
+            </h4>
+            {screens
+              .filter((s) => s[2] === m)
+              .map((s) => (
+                <button
+                  key={s[0]}
+                  className={screen === s[0] ? 'current' : ''}
+                  onClick={() => go(s[0])}
+                >
+                  {s[1]}
+                  <ChevronRight size={13} />
+                </button>
+              ))}
+          </div>
+        ))}
+        <small>
+          TypeScript · Android-ready via Capacitor
+          <br />
+          Đặt xe và vận hành
+        </small>
+      </aside>
+      <main className="preview">
+        <div className="preview-label">
+          <span>PIKEPIKE / MOBILE EXPERIENCE</span>
+          <b>{screens.find((s) => s[0] === screen)?.[1]}</b>
+        </div>
+        <div className="phone">
+          <div className="phone-screen">
+            <div className="notch" />
+            <div className="status">
+              <b>9:41</b>
+              <span>
+                <Signal size={14} />
+                <Wifi size={14} />
+                <Battery size={18} />
+              </span>
+            </div>
+            <header className="mobile-header">
+              <div className="chrome-row">
+                <button
+                  className="icon-button"
+                  aria-label="Quay lại"
+                  onClick={() =>
+                    go(
+                      screen === 'settings'
+                        ? settingsOrigin
+                        : operational
+                          ? 'dashboard'
+                          : 'home',
+                    )
+                  }
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <button
+                  className="icon-button settings-shortcut"
+                  aria-label="Cài đặt"
+                  onClick={() => go('settings')}
+                >
+                  <Settings size={18} />
+                </button>
+                <div className="brand-notification">
+                  <button
+                    className="header-settings"
+                    aria-label="Hồ sơ và cài đặt"
+                    onClick={() => go('settings')}
+                  >
+                    <span>
+                      PikePike
+                      <i />
+                    </span>
+                  </button>
+                  <button
+                    className="notification"
+                    aria-label="Thông báo"
+                    onClick={() => go('notifications')}
+                  >
+                    <Bell size={18} />
+                    <i />
+                  </button>
+                </div>
+              </div>
+              <div className="title-row">
+                <h1>{pageNames[screen]}</h1>
+                {pinned && formPages.includes(screen) && (
+                  <div className="title-action">{primary}</div>
+                )}
+              </div>
+            </header>
+            <div className="scroll">
+              {isLive && session ? (
+                <OperationsUI
+                  screen={screen as LiveScreen}
+                  api={session.api}
+                  me={session.me}
+                  go={go}
+                  notify={notify}
+                />
+              ) : isStudentScreen && session ? (
+                <GiaoDienHub
+                  screen={screen as (typeof studentScreens)[number]}
+                  go={go}
+                  notify={notify}
+                  student={session.me.role === 'STUDENT'}
+                />
+              ) : (
+                <React.Fragment key={screen}>{content}</React.Fragment>
+              )}
+            </div>
+            {pinned && !formPages.includes(screen) && (
+              <div className="primary-dock">{primary}</div>
+            )}
+            {screen !== 'login' && (
+              <nav className="bottom-nav">
+                {(operational
+                  ? [
+                      [LayoutDashboard, 'Tổng quan', 'dashboard'],
+                      [Zap, 'Lịch sạc', 'schedule'],
+                      [Truck, 'Điều phối', 'transfer'],
+                      ...(session?.me.role === 'TECHNICIAN'
+                        ? []
+                        : [[Play, 'What-if', 'scenario']]),
+                    ]
+                  : [
+                      [Home, 'Trang chủ', 'home'],
+                      [Ticket, 'Đặt chỗ', 'reservations'],
+                      [Zap, 'Sạc xe', 'charge'],
+                      [Bike, 'Chuyến đi', 'trip'],
+                    ]
+                ).map(([I, l, s]) => {
+                  let Icon = I as LucideIcon;
+                  let active = screen === s;
+                  return (
+                    <button
+                      aria-label={l as string}
+                      key={s as string}
+                      className={active ? 'active' : ''}
+                      onClick={() => go(s as Screen)}
+                    >
+                      <Icon size={20} />
+                      {active && <span>{l as string}</span>}
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+            {toast && (
+              <div className="toast" role="status">
+                <CheckCircle2 size={18} />
+                {toast}
+              </div>
+            )}
+            <div className="home-indicator" />
+          </div>
+        </div>
+        <div className="preview-footer">
+          <span>Designed for your everyday green ride.</span>
+          <span>393 × 852 · iPhone 14 Pro</span>
+        </div>
+      </main>
+    </div>
+  );
 }
-createRoot(document.getElementById('root')!).render(<React.StrictMode>{new URLSearchParams(location.search).get('mode')==='m1-m2'?<Demo/>:<App/>}</React.StrictMode>);
+function ManHinhDangNhap({
+  username,
+  password,
+  setUsername,
+  setPassword,
+  error,
+  busy,
+  submit,
+}: {
+  username: string;
+  password: string;
+  setUsername: (value: string) => void;
+  setPassword: (value: string) => void;
+  error: string;
+  busy: boolean;
+  submit: () => void;
+}) {
+  return (
+    <>
+      <div className="hero login-hero">
+        <div>
+          <h2>
+            Đi gần hơn.
+            <br />
+            Sống xanh hơn.
+          </h2>
+        </div>
+        <img
+          className="bike-art"
+          src="/images/vehicle.png"
+          alt="Xe điện PikePike"
+        />
+      </div>
+      <form
+        className="card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <label className="field">
+          <span>Tài khoản</span>
+          <input
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Mật khẩu</span>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {error && <p role="alert">{error}</p>}
+        <button
+          className="btn"
+          disabled={busy || !username.trim() || !password}
+        >
+          Đăng nhập
+          <ArrowRight size={17} />
+        </button>
+      </form>
+    </>
+  );
+}
+createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <ManHinhChinh />
+  </React.StrictMode>,
+);

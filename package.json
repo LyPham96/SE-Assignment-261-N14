@@ -10,7 +10,7 @@
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
-    "api:start": "npm run start:m1-m2 -w server",
+    "api:start": "npm run start -w server",
     "db:migrate": "npm run migrate:m1-m2 -w server",
     "db:seed": "npm run seed:m1-m2 -w server",
     "test:api": "npm run test:m1-m2 -w server",

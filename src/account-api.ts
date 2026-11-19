@@ -10,9 +10,9 @@ export class ApiError extends Error {
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
+    response = await fetch((import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') + `/api${path}`, {
       method: body === undefined ? 'GET' : 'POST',
-      credentials: 'same-origin',
+      credentials: 'include',
       headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'X-PikePike-Request': '1' },
       body: body === undefined ? undefined : JSON.stringify(body)
     });

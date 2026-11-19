@@ -1,21 +1,16 @@
-# Chạy M3 và M4
+# Chạy PikePike M1–M4
 
-Sau khi merge `origin/thuyen`, màn hình M1/M2 có tại `/?mode=m1-m2` và dùng API `/api` trên cổng 3001. M3/M4 tiếp tục dùng `/api/v1` trên cổng 3000. Hai hệ thống dùng phiên và dữ liệu vận hành riêng.
-
-Trong dev, chạy `docker compose up -d db-m1-m2`, đặt `M1_M2_DATABASE_URL`, rồi chạy `npm run db:migrate`, `npm run db:seed` và `npm run api:start`. Khi chạy toàn stack bằng Compose, migrate M1/M2 tự chạy; có thể nạp dữ liệu dev bằng `docker compose exec api-m1-m2 npm run seed:m1-m2 -w server`. Các lệnh migration/seed M3/M4 vẫn dùng như hướng dẫn bên dưới.
-
-Nhánh `m3-m4` dùng chung ứng dụng TypeScript cho web và Capacitor. Backend cung cấp REST JSON dưới `/api/v1`. Các màn hình M3/M4 trong giao diện PikePike tại `/` gọi trực tiếp API. Trang đăng nhập xác minh mã phiên bằng `GET /api/v1/me` và lấy vai trò từ server. Các luồng M1/M2 khác vẫn cần backend của phân hệ tương ứng.
+Giao diện chính tại `/` đăng nhập bằng tài khoản và mật khẩu. Một Fastify phục vụ cả `/api` và `/api/v1`; cả hai dùng cùng cookie phiên M1 và một PostgreSQL. Đặt/hủy chỗ M2 xuất hiện ở dashboard M3. Điều chuyển M4 cập nhật đội xe và chỗ đỗ mà M2 đọc, trong cùng giao dịch.
 
 ## Chạy dev
 
-Yêu cầu Node.js 24, npm, Docker Compose và PostgreSQL 17 (Compose có sẵn dịch vụ `db`).
+1. Yêu cầu Node.js 24, npm và PostgreSQL 17. Tạo `.env` từ `.env.example`; đặt `DATABASE_URL`. Dùng database mới cho lần chạy hợp nhất đầu tiên. Dữ liệu từ hai database cũ cần kế hoạch nhập riêng.
+2. Chạy `npm ci` và `docker compose up -d db` (hoặc dùng PostgreSQL 17 đã cài).
+3. Chạy `npm run db:migrate`, `npm run migrate -w server` và `npm run build -w server`.
+4. Nạp dữ liệu thử bằng `npm run db:seed` rồi `npm run seed -w server`. Seed M1 tạo tài khoản thử theo `server/src/seed.mjs`; seed M3 tạo cổng sạc và xe cá nhân thử nếu có tài khoản sinh viên seed.
+5. Mở hai terminal chạy `npm run dev -w server` và `npm run dev`. Truy cập [PikePike](http://127.0.0.1:5173/).
 
-1. Tạo `.env` từ `.env.example` và đặt mật khẩu dev cùng `IOT_KEY` nếu cần gửi bản tin thiết bị. Giữ `DATABASE_URL` đồng bộ với mật khẩu.
-2. Chạy `npm ci`, `docker compose up -d db`, `npm run migrate -w server` và `npm run build -w server`.
-3. Chạy `npm run seed -w server`. Lệnh tạo dữ liệu demo và in token một ngày cho `SV01`, `OP01`, `TECH01`. Chạy lại seed sẽ thay token demo.
-4. Chạy `npm run dev -w server` và `npm run dev` trong hai terminal. Mở [PikePike](http://127.0.0.1:5173/) và nhập mã phiên tương ứng với vai trò cần thử. Kiểm tra API qua [OpenAPI](http://127.0.0.1:3000/api/v1/openapi.json).
-
-Để chạy cả stack bằng Docker, dùng `docker compose up --build -d` rồi `docker compose exec api npm run seed -w server`. Web nghe trên cổng 8080. Android dùng `VITE_API_BASE_URL` tuyệt đối, build đồng bộ bằng `npm run android:sync` và đóng gói trong Android Studio. Backend thực của M1 và M2 kết nối vào cùng hợp đồng phiên, xe, chỗ đỗ, chuyến đi và giữ chỗ. Dữ liệu seed phục vụ thử M3/M4 độc lập.
+Khi dùng `docker compose up --build -d`, hai migration job chạy trên cùng PostgreSQL và API khởi động sau cả hai. Để nạp dữ liệu thử chạy `docker compose exec api npm run seed:m1-m2 -w server`, rồi `docker compose exec api npm run seed -w server`. Web nghe trên cổng 8080. Luồng ứng dụng hiện được xác minh trên web; kiểm tra cookie của bản Android cần chạy trên WebView thật.
 
 ## Đối chiếu điểm gọi
 
@@ -30,6 +25,10 @@ Yêu cầu Node.js 24, npm, Docker Compose và PostgreSQL 17 (Compose có sẵn 
 | UC-23 | `RecommendationController.previewImpact`, `applyRecommendations(runId, recommendationIds, confirmed, performedBy)`. Điều chuyển gọi `createOrder`; sạc gọi `lapLich` với `THAT` và `null`. |
 
 Tên lớp và component theo `Class List.pdf`. Với các chữ ký khác nhau giữa bảng kiến trúc và mục thiết kế chi tiết trong `main.pdf`, bảng trên dùng tên và thứ tự tham số ở phần thiết kế chi tiết. Các lỗi nghiệp vụ được ánh xạ thành mã HTTP tại lớp API.
+
+Các điểm vào M1/M2 đang chạy gồm `ManHinhChinh`, `ManHinhDangNhap`, `GiaoDienHub`, `BoDieuKhienXacThuc`, `LoginSession`, `DieuKhienDatCho`, `CSDLTaiNguyen` và `BoDinhThoi`. Các màn hình M3/M4 dùng tên boundary trong chính luồng giao diện. Một số tên entity của danh sách được biểu diễn bằng type TypeScript, như `Hub`, `Vehicle`, `ParkingSpot`, `Reservation` và `Trip`.
+
+`StudentProfile`, `PrivateVehicle`, `DieuKhienChuyenDi` và `HeThongIoT` chưa có triển khai đúng tên trong hai nhánh nguồn. `GiaoDienChuyenDi` thông báo thiếu API cho các luồng chưa hỗ trợ. Phạm vi đã ghép gồm đăng nhập, tìm Hub/xe, đặt xe dùng chung, xem/hủy đặt chỗ và các luồng M3/M4 hiện có. Chưa có luồng quản lý hồ sơ/duyệt xe cá nhân hoặc nhận/trả xe từ M1/M2.
 
 ## Kiểm thử và mặc định demo
 

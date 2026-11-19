@@ -5,7 +5,21 @@ import {ChargingPoint, HubMetricRecord, requireRule} from './domain.js';
 requireRule(process.env.DATABASE_URL, 'DATABASE_URL_REQUIRED');
 const pool = new pg.Pool({connectionString: process.env.DATABASE_URL});
 try {
+  const {rows:[schema]} = await pool.query("SELECT to_regclass('pikepike_shared_network') AS ready");
+  const shared = Boolean(schema.ready);
+  const studentId = shared ? (await pool.query("SELECT id FROM users WHERE username='student@pikepike.vn'")).rows[0]?.id : undefined;
   const credentials = await Database.transaction(pool,'SYSTEM', db => {
+    if (shared) {
+      requireRule(db.state.hubs.length,'SEED_M1_M2_FIRST');
+      for (const hub of db.state.hubs) {
+        if (!db.state.points.some(point=>point.hubId===hub.id)) db.state.points.push(new ChargingPoint(hub.id+'-P1',hub.id,'RANH',2));
+      }
+      const hub = db.state.hubs.find(item=>item.id==='metro');
+      if (studentId && hub && !db.state.vehicles.some(vehicle=>vehicle.id==='PV01')) {
+        db.state.vehicles.push({id:'PV01',hubId:hub.id,ownerId:studentId,approved:true,status:'AVAILABLE',battery:25});
+      }
+      return [];
+    }
     const users = [{id:'SV01',role:'STUDENT'},{id:'OP01',role:'OPERATOR'},{id:'TECH01',role:'TECHNICIAN'}] as const;
     if (!db.state.hubs.length) for (let index = 1; index <= 6; index++) {
       const id = 'H0' + index;
