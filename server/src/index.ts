@@ -36,7 +36,13 @@ export async function createServer(pool: pg.Pool, service = BoDieuKhienXacThuc.c
   await app.register(cookie);
   await app.register(swagger, {openapi: {info: {title: 'PikePike M3 / M4', version: '1.0.0'}, components: {securitySchemes: {bearer: {type: 'http', scheme: 'bearer'}, device: {type: 'apiKey', name: 'X-IoT-Key', in: 'header'}}}}});
   await app.register(async child=>{
-    await registerM1M2Routes(child,{pool,service:m1m2,secureCookies:process.env.COOKIE_SECURE==='true'});
+    await registerM1M2Routes(child,{pool,service:m1m2,secureCookies:process.env.COOKIE_SECURE==='true',tripHooks:{
+      onLowBatteryReturn:(client,vehicleId,hubId)=>Database.withClient(client,'SYSTEM',db=>{
+        if(!db.docDieuKienDangKy(vehicleId,hubId).trungYeuCau)new ChargingService(db).taoYeuCauSacTuDong(vehicleId,hubId);
+      }),
+      onBreakdown:(client,userId,tripId,vehicleId,location,description)=>Database.withClient(client,userId,db=>
+        new IncidentService(db).baoSuCo(userId,'XE',vehicleId,'TRIP_BREAKDOWN',description,location,null,tripId).maSuCo),
+    }});
   });
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof DomainError) {

@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import {StudentProfile,PrivateVehicle,DieuKhienChuyenDi,HeThongIoT} from './remaining.mjs';
 import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -17,7 +18,7 @@ export async function createApp({ pool, clock, fault, logger = false, secureCook
   return app;
 }
 
-export async function registerM1M2Routes(app,{pool,service,secureCookies=false}) {
+export async function registerM1M2Routes(app,{pool,service,secureCookies=false,tripHooks}) {
   const xacThuc = new BoDieuKhienXacThuc(service);
   const datCho = new DieuKhienDatCho(service);
   const taiNguyen = new CSDLTaiNguyen(service);
@@ -29,7 +30,7 @@ export async function registerM1M2Routes(app,{pool,service,secureCookies=false})
     return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Không thể xử lý yêu cầu. Vui lòng thử lại.' });
   });
   app.addHook('onRequest', async request => {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.headers['x-pikepike-request'] !== '1') throw new Problem(403, 'CSRF_REJECTED', 'Yêu cầu không hợp lệ. Vui lòng tải lại trang.');
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.routeOptions.url !== '/api/iot/trip-events' && request.headers['x-pikepike-request'] !== '1') throw new Problem(403, 'CSRF_REJECTED', 'Yêu cầu không hợp lệ. Vui lòng tải lại trang.');
   });
   const auth = async request => { request.user = await xacThuc.kiemTraPhien(request.cookies.pikepike_session); };
   const protectedSchema = { security: [{ session: [] }] };
@@ -53,4 +54,31 @@ export async function registerM1M2Routes(app,{pool,service,secureCookies=false})
     return reply.code(201).send(result);
   });
   app.post('/api/reservations/:id/cancel', { preHandler: auth, schema: { ...protectedSchema, params: { type: 'object', required: ['id'], properties: { id: { type: 'string', format: 'uuid' } } } } }, request => datCho.huyDatCho(request.user.id, request.params.id));
+  const profiles=new StudentProfile(pool);
+  const privateVehicles=new PrivateVehicle(pool);
+  const iot=new HeThongIoT(pool);
+  const trips=new DieuKhienChuyenDi(pool,iot,tripHooks);
+  const uuid={type:'string',format:'uuid'};
+  const shortText={type:'string',minLength:1,maxLength:200};
+  function route(method,url,handler,{properties,required,params,device=false}={}){
+    const schema={...(device?{}:protectedSchema)};
+    if(properties)schema.body={type:'object',properties,required:required??Object.keys(properties),additionalProperties:false};
+    if(params)schema.params={type:'object',properties:{id:params},required:['id']};
+    app.route({method,url,schema,...(!device&&{preHandler:auth}),handler});
+  }
+  route('GET','/api/me/profile',req=>profiles.layHoSo(req.user.id));
+  route('PUT','/api/me/profile',req=>profiles.capNhatHoSo(req.user.id,req.body),{properties:{hoTen:shortText,thongTinLienHe:shortText}});
+  route('GET','/api/private-vehicles',req=>privateVehicles.layDanhSach(req.user));
+  route('POST','/api/private-vehicles',req=>privateVehicles.khaiBaoXe(req.user.id,req.body),{properties:{bienSo:shortText,mauXe:shortText,maHub:idSchema}});
+  route('POST','/api/private-vehicles/:id/review',req=>privateVehicles.duyetXe(req.user.id,req.params.id,req.body.quyetDinh,req.body.lyDo,req.body.phienBanDaMo),{params:idSchema,properties:{quyetDinh:{enum:['APPROVED','REJECTED']},lyDo:shortText,phienBanDaMo:{type:'integer',minimum:1}},required:['quyetDinh','phienBanDaMo']});
+  route('GET','/api/reservations/:id/unlock-code',req=>trips.layMaMoKhoa(req.user.id,req.params.id),{params:uuid});
+  route('POST','/api/reservations/:id/pickup',req=>trips.yeuCauMoKhoaNhanXe(req.user.id,req.params.id,req.body.maMoKhoa),{params:uuid,properties:{maMoKhoa:{type:'string',pattern:'^[0-9]{6}$'}}});
+  route('GET','/api/me/trips',req=>trips.layChuyenDi(req.user.id));
+  route('GET','/api/trips/:id/spots',req=>trips.layChoTraXe(req.user.id,req.params.id),{params:uuid});
+  route('POST','/api/trips/:id/return',req=>req.body.maChoDo
+    ? trips.traXe(req.user.id,req.params.id,req.body.maChoDo)
+    : trips.yeuCauHoanTatTraXe(req.user.id,req.params.id),{params:uuid,properties:{maChoDo:idSchema},required:[]});
+  route('POST','/api/trips/:id/breakdown',req=>trips.xuLySuCoDocDuong(req.user.id,req.params.id,req.body.toaDoViTri,req.body.moTaSuCo),{params:uuid,properties:{toaDoViTri:shortText,moTaSuCo:shortText}});
+  route('POST','/api/iot/trip-events',req=>iot.nhanTin(req.body,req.headers['x-iot-key']),{device:true,properties:{eventId:idSchema,subjectId:uuid,vehicleId:idSchema,kind:{enum:['UNPLUGGED','PLUGGED']},spotId:idSchema,distanceKm:{type:'number',minimum:0,maximum:2000}},required:['eventId','subjectId','vehicleId','kind']});
+  route('GET','/api/iot/trip-commands/:id',req=>iot.layLenhMoKhoa(req.params.id,req.headers['x-iot-key']),{device:true,params:idSchema});
 }

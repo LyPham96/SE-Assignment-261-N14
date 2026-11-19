@@ -162,6 +162,8 @@ export async function createService(pool, clock = () => new Date(), fault = asyn
         if (user.booking_locked_until > now) fail(423, 'BOOKING_LOCKED', 'Quyền đặt chỗ đang bị khóa do không nhận xe.');
         const active = await db.query("SELECT id FROM reservations WHERE user_id=$1 AND status='DA_XAC_NHAN'", [userId]);
         if (active.rowCount) fail(409, 'ACTIVE_RESERVATION', 'Bạn đang có một đặt chỗ hiệu lực. Vui lòng hủy hoặc chờ hết hạn.');
+        const {rows:[tripSchema]}=await db.query("SELECT to_regclass('shared_trips') AS ready");
+        if(tripSchema.ready&&(await db.query('SELECT id FROM shared_trips WHERE user_id=$1 AND ended_at IS NULL',[userId])).rowCount)fail(409,'ACTIVE_TRIP','Bạn đang có chuyến đi chưa kết thúc.');
         const { rows: [initial] } = await db.query('SELECT hub_id FROM vehicles WHERE id=$1', [vehicleId]);
         if (!initial) fail(404, 'NOT_FOUND', 'Không tìm thấy xe.');
         await lockHubs(db, [initial.hub_id, destinationHubId]);

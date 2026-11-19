@@ -264,6 +264,9 @@ export function OperationsUI({
   const [hub, setHub] = useState(me.hubs[0]?.id ?? '');
   const [destination, setDestination] = useState(me.hubs[1]?.id ?? '');
   const [vehicle, setVehicle] = useState(me.vehicles[0]?.id ?? '');
+  useEffect(()=>{
+    if(!me.vehicles.some(item=>item.id===vehicle))setVehicle(me.vehicles[0]?.id??'');
+  },[me.vehicles,vehicle]);
   const [filter, setFilter] = useState('vehicles');
   const [resourceType, setResourceType] = useState('XE');
   const [resourceId, setResourceId] = useState(me.trips[0]?.vehicleId ?? '');

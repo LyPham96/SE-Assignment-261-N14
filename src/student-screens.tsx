@@ -259,8 +259,19 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
                   ? 'Đã giữ xe'
                   : item.status === 'DA_HUY'
                     ? 'Đã hủy'
-                    : 'Hết hạn'}
+                    : item.status === 'DA_NHAN'
+                      ? 'Đã nhận xe'
+                      : 'Hết hạn'}
               </p>
+              {item.status === 'DA_XAC_NHAN' && (
+                <Primary
+                  title="Nhận xe"
+                  onClick={() => {
+                    setReservation(item);
+                    go('unlock');
+                  }}
+                />
+              )}
               {item.status === 'DA_XAC_NHAN' && (
                 <Primary
                   title="Hủy đặt chỗ"
@@ -310,7 +321,14 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
       );
       break;
     default:
-      body = <GiaoDienChuyenDi go={go} />;
+      body = (
+        <GiaoDienChuyenDi
+          screen={screen}
+          reservation={reservation}
+          go={go}
+          notify={notify}
+        />
+      );
   }
   return (
     <>
@@ -324,11 +342,200 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
   );
 }
 
-export function GiaoDienChuyenDi({ go }: { go: Props['go'] }) {
+type TripView = {
+  id: string;
+  vehicle_name: string;
+  started_at: string;
+  ended_at?: string;
+  fee?: string;
+};
+type ReturnSpot = { id: string; hub_name: string };
+export function GiaoDienChuyenDi({
+  screen,
+  reservation,
+  go,
+  notify,
+}: {
+  screen: StudentScreen;
+  reservation?: Reservation;
+  go: Props['go'];
+  notify: Props['notify'];
+}) {
+  const [trips, setTrips] = useState<TripView[]>([]);
+  const [spots, setSpots] = useState<ReturnSpot[]>([]);
+  const [spot, setSpot] = useState('');
+  const [code, setCode] = useState('');
+  const [shownCode, setShownCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState<TripView>();
+  const [reporting,setReporting]=useState(false);
+  const [location,setLocation]=useState('');
+  const [description,setDescription]=useState('');
+  const active = trips.find((trip) => !trip.ended_at);
+  useEffect(() => {
+    setError('');
+    if (screen === 'trip' || screen === 'return') {
+      void api<TripView[]>('/me/trips').then(setTrips, (reason) =>
+        setError(reason.message),
+      );
+    }
+  }, [screen]);
+  useEffect(() => {
+    if (screen !== 'return' || !active?.id) return;
+    void api<ReturnSpot[]>(
+      '/trips/' + encodeURIComponent(active.id) + '/spots',
+    ).then(
+      (items) => {
+        setSpots(items);
+        setSpot(items[0]?.id ?? '');
+      },
+      (reason) => setError(reason.message),
+    );
+  }, [screen, active?.id]);
+  async function run(work: () => Promise<void>) {
+    setBusy(true);
+    setError('');
+    try {
+      await work();
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  let content;
+  if (screen === 'unlock') {
+    content = reservation ? (
+      <div className="card">
+        <h2>{reservation.vehicle_name}</h2>
+        <Primary
+          title="Xem mã mở khóa"
+          disabled={busy}
+          onClick={() =>
+            void run(async () =>
+              setShownCode(
+                (
+                  await api<{ maMoKhoa: string }>(
+                    '/reservations/' + reservation.id + '/unlock-code',
+                  )
+                ).maMoKhoa,
+              ),
+            )
+          }
+        />
+        {shownCode && (
+          <p>
+            Mã mở khóa: <strong>{shownCode}</strong>
+          </p>
+        )}
+        <label className="field">
+          Mã mở khóa
+          <input
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </label>
+        <Primary
+          title="Nhận xe"
+          disabled={busy || !/^\d{6}$/.test(code)}
+          onClick={() =>
+            void run(async () => {
+              await api('/reservations/' + reservation.id + '/pickup', {
+                maMoKhoa: code,
+              });
+              setCode('');
+              setShownCode('');
+              notify('Đã nhận xe');
+              go('trip');
+            })
+          }
+        />
+      </div>
+    ) : (
+      <Primary
+        title="Chọn đặt chỗ để nhận xe"
+        onClick={() => go('reservations')}
+      />
+    );
+  } else if (screen === 'trip') {
+    content = active ? (
+      <div className="card">
+        <h2>{active.vehicle_name}</h2>
+        <p>
+          Đã nhận xe lúc {new Date(active.started_at).toLocaleString('vi-VN')}
+        </p>
+        <Primary title="Trả xe" onClick={() => go('return')} />
+        <button className="btn secondary" onClick={()=>setReporting(value=>!value)}>Báo xe hỏng dọc đường</button>
+        {reporting&&<>
+          <label className="field">Vị trí sự cố<input value={location} onChange={e=>setLocation(e.target.value)}/></label>
+          <label className="field">Mô tả sự cố<textarea value={description} onChange={e=>setDescription(e.target.value)}/></label>
+          <Primary title="Gửi báo cáo và kết thúc chuyến" disabled={busy||!location.trim()||!description.trim()} onClick={()=>void run(async()=>{
+            const incident=await api<{maSuCo:string}>('/trips/'+active.id+'/breakdown',{toaDoViTri:location,moTaSuCo:description});
+            setTrips(await api('/me/trips'));
+            setReporting(false);notify('Đã báo sự cố '+incident.maSuCo);
+          })}/>
+        </>}
+      </div>
+    ) : (
+      <p>Không có chuyến đi đang chạy.</p>
+    );
+  } else if (screen === 'return') {
+    content = finished ? (
+      <div className="card">
+        <h2>Đã trả xe</h2>
+        <p>Chi phí: {Number(finished.fee ?? 0).toLocaleString('vi-VN')} ₫</p>
+      </div>
+    ) : active ? (
+      <div className="card">
+        <h2>{active.vehicle_name}</h2>
+        <label className="field">
+          Chỗ trả xe
+          <select value={spot} onChange={(e) => setSpot(e.target.value)}>
+            {spots.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.hub_name} · {item.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>Cắm cáp sạc tại chỗ đã chọn trước khi xác nhận.</p>
+        <Primary
+          title="Xác nhận trả xe"
+          disabled={busy || !spot}
+          onClick={() =>
+            void run(async () => {
+              setFinished(
+                await api('/trips/' + active.id + '/return', { maChoDo: spot }),
+              );
+              notify('Đã hoàn tất chuyến đi');
+            })
+          }
+        />
+      </div>
+    ) : (
+      <p>Không có chuyến đi đang chạy.</p>
+    );
+  } else
+    content = (
+      <div className="card">
+        <p>Chức năng này chưa có API trong M2.</p>
+        <Primary
+          title="Xem đặt chỗ của tôi"
+          onClick={() => go('reservations')}
+        />
+      </div>
+    );
   return (
-    <div className="card">
-      <p>Chức năng này chưa có API trong M2.</p>
-      <Primary title="Xem đặt chỗ của tôi" onClick={() => go('reservations')} />
-    </div>
+    <>
+      {error && (
+        <p role="alert" className="note">
+          {error}
+        </p>
+      )}
+      {content}
+    </>
   );
 }

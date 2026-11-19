@@ -25,6 +25,7 @@ import './mobile.css';
 import './blue.css';
 import { Settings as SettingsPage, usePreferences } from './preferences';
 import { api as accountApi } from './account-api';
+import { QuanLyHoSo } from './account-profile';
 import { GiaoDienHub, studentScreens } from './student-screens';
 import {
   createApi,
@@ -77,6 +78,23 @@ function ManHinhChinh() {
     };
   }, [screen]);
   const [session, setSession] = useState<{ api: Api; me: Identity }>();
+  const activeApi = session?.api;
+  useEffect(() => {
+    if (!activeApi || !['charge', 'report'].includes(screen)) return;
+    let active = true;
+    void activeApi<Identity>('/me').then(
+      (me) => {
+        if (active)
+          setSession((current) =>
+            current?.api === activeApi ? { api: activeApi, me } : current,
+          );
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [screen, activeApi]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -191,6 +209,9 @@ function ManHinhChinh() {
     case 'settings':
       content = (
         <>
+          {session && ['STUDENT', 'ADMIN'].includes(session.me.role) && (
+            <QuanLyHoSo role={session.me.role} />
+          )}
           <SettingsPage
             theme={theme}
             setTheme={setTheme}

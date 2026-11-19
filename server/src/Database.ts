@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import type {Pool} from 'pg';
+import type {Pool, PoolClient} from 'pg';
 import {definitions, sqlIdentifier} from '../schema.mjs';
 import * as d from './domain.js';
 import {loadSharedNetwork} from './shared-network.js';
@@ -37,6 +37,19 @@ export class Database {
       await client.query('BEGIN');
       await client.query("SET LOCAL lock_timeout = '2s'");
       await client.query("SELECT pg_advisory_xact_lock(320304)");
+      const result=await Database.withClient(client,actor,operation);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if ((error as {code?: string}).code === '55P03') throw new d.DomainError('DATA_NOT_STABLE');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+  // The caller owns the transaction and the shared-network advisory lock.
+  static async withClient<T>(client:PoolClient,actor:string,operation:(db:Database)=>T|Promise<T>){
       const {rows} = await client.query<{collection: typeof collections[number]; entity_key: string; payload: Record<string, unknown>}>(readNetwork);
       const state = new d.NetworkState();
       for (const {collection, entity_key, payload} of rows) {
@@ -84,15 +97,7 @@ export class Database {
         const collection = composite.slice(0,index) as typeof collections[number];
         await client.query('DELETE FROM ' + sqlIdentifier(definitions[collection][0]) + ' WHERE entity_key=$1', [composite.slice(index + 1)]);
       }
-      await client.query('COMMIT');
-      return result;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      if ((error as {code?: string}).code === '55P03') throw new d.DomainError('DATA_NOT_STABLE');
-      throw error;
-    } finally {
-      client.release();
-    }
+    return result;
   }
   docThongTinXeVaHub(maXe: string, maHub: string) {
     const xe = this.state.vehicles.find(vehicle => vehicle.id === maXe);

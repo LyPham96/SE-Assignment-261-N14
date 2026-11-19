@@ -17,6 +17,14 @@ export async function loadSharedNetwork(client:PoolClient,state:NetworkState) {
   };
   state.hubs=merge(state.hubs,hubs.map(h=>({id:h.id,name:h.name,expectedDemand:state.hubs.find(item=>item.id===h.id)?.expectedDemand??h.fleet,compatiblePrivateVehicles:true,distances:Object.fromEntries(hubs.map(other=>[other.id,Math.hypot(other.x-h.x,other.y-h.y)]))})));
   state.vehicles=merge(state.vehicles,vehicles.map(v=>({id:v.id,hubId:v.hub_id,status:toDomain[v.status],battery:v.battery,spotId:v.spot_id??undefined})));
+  const {rows:[expanded]}=await client.query("SELECT to_regclass('private_vehicles') AS ready");
+  if(expanded.ready){
+    const privateVehicles=(await client.query("SELECT * FROM private_vehicles WHERE status='APPROVED'")).rows;
+    const byId=new Map(state.vehicles.map(vehicle=>[vehicle.id,vehicle]));
+    state.vehicles=merge(state.vehicles,privateVehicles.map(v=>byId.get(v.id)??{id:v.id,hubId:v.hub_id,status:'AVAILABLE',battery:0,ownerId:v.owner_id,approved:true}));
+    const trips=(await client.query('SELECT t.*,v.hub_id FROM shared_trips t JOIN vehicles v ON v.id=t.vehicle_id')).rows;
+    state.trips=merge(state.trips,trips.map(t=>({id:t.id,userId:t.user_id,vehicleId:t.vehicle_id,hubId:t.hub_id,active:!t.ended_at,endedAt:t.ended_at?.getTime()})));
+  }
   state.spots=merge(state.spots,spots.map(s=>({id:s.id,hubId:s.hub_id,status:s.status,vehicleId:s.vehicle_id??undefined,holder:s.rebalancing_holder??undefined})));
   state.users=users.filter(u=>['STUDENT','OPERATIONS','TECHNICIAN','ADMIN'].includes(u.role)).map(u=>({id:u.id,role:u.role==='OPERATIONS'?'OPERATOR':u.role}));
   state.reservations=reservations.map(r=>({id:r.id,userId:r.user_id,hubId:r.hub_id,active:true}));

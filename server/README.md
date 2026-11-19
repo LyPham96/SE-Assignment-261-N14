@@ -28,7 +28,11 @@ Tên lớp và component theo `Class List.pdf`. Với các chữ ký khác nhau 
 
 Các điểm vào M1/M2 đang chạy gồm `ManHinhChinh`, `ManHinhDangNhap`, `GiaoDienHub`, `BoDieuKhienXacThuc`, `LoginSession`, `DieuKhienDatCho`, `CSDLTaiNguyen` và `BoDinhThoi`. Các màn hình M3/M4 dùng tên boundary trong chính luồng giao diện. Một số tên entity của danh sách được biểu diễn bằng type TypeScript, như `Hub`, `Vehicle`, `ParkingSpot`, `Reservation` và `Trip`.
 
-`StudentProfile`, `PrivateVehicle`, `DieuKhienChuyenDi` và `HeThongIoT` chưa có triển khai đúng tên trong hai nhánh nguồn. `GiaoDienChuyenDi` thông báo thiếu API cho các luồng chưa hỗ trợ. Phạm vi đã ghép gồm đăng nhập, tìm Hub/xe, đặt xe dùng chung, xem/hủy đặt chỗ và các luồng M3/M4 hiện có. Chưa có luồng quản lý hồ sơ/duyệt xe cá nhân hoặc nhận/trả xe từ M1/M2.
+`StudentProfile` và `PrivateVehicle` chạy trong phần hồ sơ của giao diện chính. Xe cá nhân được quản trị duyệt theo phiên bản hồ sơ trước khi hiện trong đăng ký sạc M3. `DieuKhienChuyenDi` và `HeThongIoT` chạy trong luồng nhận/trả xe dùng chung. Chạy migration M1/M2 để tạo các bảng nghiệp vụ mới.
+
+Trả xe pin dưới 30% gọi `ChargingService.taoYeuCauSacTuDong` trong cùng giao dịch. Báo hỏng dọc đường kết thúc chuyến, giải phóng chỗ đích và gọi `IncidentService.baoSuCo` để tạo sự cố kèm tác vụ thu hồi.
+
+Thiết bị cần gửi `X-IoT-Key` khi lấy lệnh từ `GET /api/iot/trip-commands/:id` hoặc xác nhận `UNPLUGGED` / `PLUGGED` tại `POST /api/iot/trip-events`. Giao diện giữ nguyên trạng thái chuyến đi cho đến khi có tín hiệu phù hợp và cho phép xác nhận lại. Có thể cấu hình `TRIP_UNLOCK_FEE`, `TRIP_MINUTE_RATE` và `TRIP_KM_RATE` theo biểu phí; mặc định là 0. Luồng kiểm thử sử dụng bản tin thiết bị thử qua API. Chưa xác minh khóa/cáp thật hoặc quét QR qua camera.
 
 ## Kiểm thử và mặc định demo
 

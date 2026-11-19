@@ -32,6 +32,9 @@ services:
       DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD}@db:5432/pikepike
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       IOT_KEY: ${IOT_KEY:-}
+      TRIP_UNLOCK_FEE: ${TRIP_UNLOCK_FEE:-0}
+      TRIP_MINUTE_RATE: ${TRIP_MINUTE_RATE:-0}
+      TRIP_KM_RATE: ${TRIP_KM_RATE:-0}
       USE_REAL_IOT: ${USE_REAL_IOT:-false}
       DEMO_IOT: ${DEMO_IOT:-false}
       CHARGING_BATTERY_WEIGHT: ${CHARGING_BATTERY_WEIGHT:-1}
