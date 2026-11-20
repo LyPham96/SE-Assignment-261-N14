@@ -4,7 +4,7 @@ export const definitions = {
   users: ['app_user', {id:'text',role:'text',sessionHash:'text',sessionExpiresAt:'time'}],
   vehicles: ['vehicle', {id:'text',hubId:'text',status:'text',battery:'double precision',ownerId:'text',approved:'boolean',spotId:'text'}],
   spots: ['parking_spot', {id:'text',hubId:'text',status:'text',holder:'text',vehicleId:'text'}],
-  points: ['charging_point', {id:'text',hubId:'text',status:'text',rate:'double precision'}],
+  points: ['charging_point', {id:'text',hubId:'text',status:'text',rate:'double precision',retired:'boolean'}],
   requests: ['charging_request', {id:'text',userId:'text',vehicleId:'text',hubId:'text',battery:'double precision',createdAt:'time',status:'text',reason:'text',khungGio:'jsonb',targetBattery:'double precision'}],
   sessions: ['charging_session', {id:'text',requestId:'text',pointId:'text',start:'time',end:'time'}],
   incidents: ['incident', {id:'text',reportedBy:'text',resourceType:'text',resourceId:'text',kind:'text',description:'text',location:'text',tripId:'text',attachment:'text',status:'text',technician:'text',reason:'text',repair:'text'}],

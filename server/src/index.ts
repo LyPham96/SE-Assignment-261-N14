@@ -7,7 +7,7 @@ import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import pg from 'pg';
 import {Database, type DuLieuKiemTraSac} from './Database.js';
-import {DomainError, requireRule, type BanTinTrangThai, type LoaiTaiNguyen, type ScenarioParams, HubMetricRecord} from './domain.js';
+import {DomainError, requireRule, type BanTinTrangThai, type LoaiTaiNguyen, type ScenarioParams, HubMetricRecord, ChargingPoint} from './domain.js';
 import {ChargingService, IncidentService, MonitoringService, DichVuCanhBao, IoTGateway, ResourceService} from './m3.js';
 import {RebalancingController, ReportController, ScenarioController, SimulationController, SimulationResultController, RecommendationController, type CreateOrderCommand, type ReportFilter} from './m4.js';
 import {BoDieuKhienXacThuc,BoDinhThoi} from '../src/service.mjs';
@@ -42,6 +42,16 @@ export async function createServer(pool: pg.Pool, service = BoDieuKhienXacThuc.c
       }),
       onBreakdown:(client,userId,tripId,vehicleId,location,description)=>Database.withClient(client,userId,db=>
         new IncidentService(db).baoSuCo(userId,'XE',vehicleId,'TRIP_BREAKDOWN',description,location,null,tripId).maSuCo),
+      onHubConfig:(client,hubId,config)=>Database.withClient(client,'SYSTEM',db=>{
+        const points=db.state.points.filter(p=>p.hubId===hubId);
+        const removable=points.filter(p=>p.status==='RANH'&&!db.state.sessions.some(s=>s.pointId===p.id&&s.end>db.now()));
+        const remove=Math.max(0,points.length-config.chargingCount);
+        requireRule(remove<=removable.length,'CHARGING_POINTS_IN_USE');
+        const ids=new Set(removable.slice(0,remove).map(p=>p.id));
+        for(const point of db.state.points) if(ids.has(point.id)) point.retired=true;
+        for(let i=points.length;i<config.chargingCount;i++) db.state.points.push(new ChargingPoint(hubId+'-C-'+crypto.randomUUID(),hubId,'RANH',config.chargingRate));
+        for(const point of db.state.points.filter(p=>p.hubId===hubId&&!p.retired)) point.rate=config.chargingRate;
+      }),
     }});
   });
   app.setErrorHandler((error, _request, reply) => {
@@ -150,6 +160,7 @@ export async function createServer(pool: pg.Pool, service = BoDieuKhienXacThuc.c
   route('POST','/rebalancing/orders',object({sourceHubId:string,destHubId:string,vehicleIds:strings,idempotencyKey:string,confirmed:boolean}),(db,i) => new RebalancingController(db).createOrder(i as CreateOrderCommand),{status:201});
   route('POST','/rebalancing/orders/:id/vehicle-broken',object({vehicleId:string,description:string,location:string}),(db,i,p) => new RebalancingController(db).onVehicleBroken(p.id,i.vehicleId,db.actor,i.description,i.location));
   route('POST','/rebalancing/orders/:id/complete',undefined,(db,_i,p) => new RebalancingController(db).completeOrder(p.id,db.actor));
+  route('POST','/rebalancing/orders/:id/assign',object({technicianId:string}),(db,i,p)=>new RebalancingController(db).assignPendingOrder(p.id,i.technicianId));
   route('POST','/reports',report,(db,i) => new ReportController(db).getOperationsReport(i as ReportFilter));
   route('POST','/reports/refresh',report,(db,i) => new ReportController(db).refreshReport(i as ReportFilter));
   route('GET','/scenarios/templates',undefined,db => {db.authorize('OPERATOR');return new ScenarioController(db).listTemplates();});

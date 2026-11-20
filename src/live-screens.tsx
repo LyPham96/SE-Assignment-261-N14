@@ -118,6 +118,7 @@ export const createApi =
     if (reply.status === 204) return undefined as never;
     const value = await reply.json();
     if (!reply.ok) {
+      if(reply.status===401)window.dispatchEvent(new Event('pikepike-session-expired'));
       const fields =
         value.fieldErrors && !Array.isArray(value.fieldErrors)
           ? Object.entries(value.fieldErrors)
@@ -366,7 +367,7 @@ export function OperationsUI({
   );
   const staff = useRead<Item[]>(
     api,
-    screen === 'incident' && me.role === 'OPERATOR'
+    ['incident','transfer'].includes(screen) && me.role === 'OPERATOR'
       ? '/operations/technicians'
       : null,
   );
@@ -511,6 +512,10 @@ export function OperationsUI({
         </h3>
         {badge(o.status)}
         <p>{o.vehicleIds.join(', ')}</p>
+        {o.status==='PENDING_ASSIGNMENT'&&me.role==='OPERATOR'&&<>
+          {field('Kỹ thuật viên nhận lệnh',<select value={technician} onChange={e=>setTechnician(e.target.value)}><option value="">Chọn kỹ thuật viên</option>{staff.data?.map(option)}</select>)}
+          {action('Phân công lệnh',async()=>{await api('/rebalancing/orders/'+pathId(o.id)+'/assign',{technicianId:technician});orders.refresh();},!technician)}
+        </>}
         {o.technicianId === me.id &&
           ['ASSIGNED', 'IN_PROGRESS'].includes(o.status) && (
             <>

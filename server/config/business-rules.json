@@ -10,5 +10,6 @@
   "noShowLimit": 2,
   "bookingLockHours": 24,
   "schedulerMilliseconds": 60000,
-  "businessTimezone": "Asia/Ho_Chi_Minh"
+  "businessTimezone": "Asia/Ho_Chi_Minh",
+  "defaultHub": { "capacity": 20, "chargingCount": 2, "chargingRate": 2 }
 }

@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "test": "npm run test:api && npm run test -w server",
+    "verify": "npm run build && npm run build -w server && npm test",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "screenshots": "node scripts/screenshots.mjs",

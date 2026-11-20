@@ -7,7 +7,8 @@ export async function loadSharedNetwork(client:PoolClient,state:NetworkState) {
   if (!schema.ready) return;
   const hubs = (await client.query('SELECT h.*, count(v.id)::int AS fleet FROM hubs h LEFT JOIN vehicles v ON v.hub_id=h.id GROUP BY h.id ORDER BY h.id')).rows;
   const vehicles = (await client.query('SELECT v.*, s.id AS spot_id FROM vehicles v LEFT JOIN spots s ON s.vehicle_id=v.id ORDER BY v.id')).rows;
-  const spots = (await client.query('SELECT * FROM spots ORDER BY id')).rows;
+  const {rows:[prototypeSchema]}=await client.query("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='spots' AND column_name='retired') AS ready");
+  const spots = (await client.query('SELECT * FROM spots'+(prototypeSchema.ready?' WHERE NOT retired':'')+' ORDER BY id')).rows;
   const users = (await client.query('SELECT id, role FROM users WHERE active ORDER BY id')).rows;
   const reservations = (await client.query("SELECT r.id,r.user_id,COALESCE(s.hub_id,v.hub_id) AS hub_id FROM reservations r JOIN vehicles v ON v.id=r.vehicle_id LEFT JOIN spots s ON s.id=r.destination_spot_id WHERE r.status='DA_XAC_NHAN'")).rows;
   const merge = <T extends {id:string}>(existing:T[], incoming:T[]) => {
@@ -25,9 +26,13 @@ export async function loadSharedNetwork(client:PoolClient,state:NetworkState) {
     const trips=(await client.query('SELECT t.*,v.hub_id FROM shared_trips t JOIN vehicles v ON v.id=t.vehicle_id')).rows;
     state.trips=merge(state.trips,trips.map(t=>({id:t.id,userId:t.user_id,vehicleId:t.vehicle_id,hubId:t.hub_id,active:!t.ended_at,endedAt:t.ended_at?.getTime()})));
   }
-  state.spots=merge(state.spots,spots.map(s=>({id:s.id,hubId:s.hub_id,status:s.status,vehicleId:s.vehicle_id??undefined,holder:s.rebalancing_holder??undefined})));
+  state.spots=merge(state.spots.filter(s=>!hubs.some(h=>h.id===s.hubId)),spots.map(s=>({id:s.id,hubId:s.hub_id,status:s.status,vehicleId:s.vehicle_id??undefined,holder:s.rebalancing_holder??undefined})));
   state.users=users.filter(u=>['STUDENT','OPERATIONS','TECHNICIAN','ADMIN'].includes(u.role)).map(u=>({id:u.id,role:u.role==='OPERATIONS'?'OPERATOR':u.role}));
   state.reservations=reservations.map(r=>({id:r.id,userId:r.user_id,hubId:r.hub_id,active:true}));
+  if(prototypeSchema.ready) {
+    const parking=(await client.query("SELECT p.id,p.user_id,s.hub_id FROM private_parking p JOIN spots s ON s.id=p.spot_id WHERE p.status='DA_XAC_NHAN'")).rows;
+    state.reservations.push(...parking.map(p=>({id:p.id,userId:p.user_id,hubId:p.hub_id,active:true})));
+  }
   return async () => {
     for(const old of vehicles) {
       const v=state.vehicles.find(item=>item.id===old.id);

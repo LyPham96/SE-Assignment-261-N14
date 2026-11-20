@@ -18,7 +18,7 @@ const readNetwork = collections.map(collection => {
     "'" + name + "'",
     type === 'time' ? 'extract(epoch from ' + sqlIdentifier(name) + ') * 1000' : sqlIdentifier(name),
   ]);
-  return "SELECT '" + collection + "' AS collection, entity_key, position, jsonb_build_object(" + fields.join(',') + ') AS payload FROM ' + sqlIdentifier(table);
+  return "SELECT '" + collection + "' AS collection, entity_key, position, jsonb_build_object(" + fields.join(',') + ') AS payload FROM ' + sqlIdentifier(table) + (collection==='points'?' WHERE retired IS NOT TRUE':'');
 }).join(' UNION ALL ') + ' ORDER BY position, entity_key';
 export type DuLieuKiemTraSac = {maXe: string; maHub: string; mucPin?: number; khungGio?: {start: number; end: number}; targetBattery?: number};
 export type PhanBoSac = {requestId: string; pointId: string; start: number; end: number};

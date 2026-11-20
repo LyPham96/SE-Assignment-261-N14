@@ -3,6 +3,8 @@ import {StudentProfile,PrivateVehicle,DieuKhienChuyenDi,HeThongIoT} from './rema
 import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { prototype } from './prototype.mjs';
+import { randomUUID } from 'node:crypto';
 import { createService, Problem, BoDieuKhienXacThuc, DieuKhienDatCho, CSDLTaiNguyen } from './service.mjs';
 
 const idSchema = { type: 'string', minLength: 1, maxLength: 80 };
@@ -81,4 +83,28 @@ export async function registerM1M2Routes(app,{pool,service,secureCookies=false,t
   route('POST','/api/trips/:id/breakdown',req=>trips.xuLySuCoDocDuong(req.user.id,req.params.id,req.body.toaDoViTri,req.body.moTaSuCo),{params:uuid,properties:{toaDoViTri:shortText,moTaSuCo:shortText}});
   route('POST','/api/iot/trip-events',req=>iot.nhanTin(req.body,req.headers['x-iot-key']),{device:true,properties:{eventId:idSchema,subjectId:uuid,vehicleId:idSchema,kind:{enum:['UNPLUGGED','PLUGGED']},spotId:idSchema,distanceKm:{type:'number',minimum:0,maximum:2000}},required:['eventId','subjectId','vehicleId','kind']});
   route('GET','/api/iot/trip-commands/:id',req=>iot.layLenhMoKhoa(req.params.id,req.headers['x-iot-key']),{device:true,params:idSchema});
+  route('GET','/api/demo/status',()=>({enabled:process.env.DEMO_IOT==='true'&&process.env.USE_REAL_IOT!=='true'&&Boolean(process.env.IOT_KEY)}));
+  route('POST','/api/demo/trip-events',async req=>{
+    if(process.env.DEMO_IOT!=='true'||process.env.USE_REAL_IOT==='true')throw new Problem(404,'NOT_FOUND','Nguồn IoT demo đang tắt.');
+    const {subjectId,kind,spotId}=req.body;
+    const table=kind==='UNPLUGGED'?'reservations':'shared_trips';
+    const row=(await pool.query('SELECT vehicle_id FROM '+table+' WHERE id=$1 AND user_id=$2',[subjectId,req.user.id])).rows[0];
+    if(!row)throw new Problem(404,'NOT_FOUND','Không tìm thấy giao dịch của bạn.');
+    return iot.nhanTin({eventId:randomUUID(),subjectId,vehicleId:row.vehicle_id,kind,spotId,...(kind==='PLUGGED'&&{distanceKm:1.5})},process.env.IOT_KEY);
+  },{properties:{subjectId:uuid,kind:{enum:['UNPLUGGED','PLUGGED']},spotId:idSchema},required:['subjectId','kind']});
+  const extra=prototype(pool,undefined,tripHooks);
+  const timestamp={type:'string',format:'date-time'};
+  route('POST','/api/parking',req=>extra.reserveParking(req.user,req.body),{properties:{vehicleId:idSchema,hubId:idSchema,startsAt:timestamp,durationMinutes:{type:'integer',minimum:1,maximum:1440}}});
+  route('GET','/api/parking',req=>extra.parking(req.user));
+  route('PUT','/api/parking/:id',req=>extra.changeParking(req.user,req.params.id,req.body),{params:uuid,properties:{hubId:idSchema,cancel:{type:'boolean'}},required:[]});
+  route('PUT','/api/reservations/:id/destination',req=>extra.changeDestination(req.user,req.params.id,req.body.hubId),{params:uuid,properties:{hubId:idSchema}});
+  route('GET','/api/me/preferences',req=>extra.preferences(req.user));
+  route('PUT','/api/me/preferences',req=>extra.preferences(req.user,req.body),{properties:{theme:{enum:['light','dark']},language:{enum:['vi','en']},fontSize:{enum:['small','medium','large']}}});
+  app.get('/api/me/history',{preHandler:auth,schema:{querystring:{type:'object',additionalProperties:false,properties:{type:{enum:['ALL','TRIP','RESERVATION','PARKING','CHARGING']},from:timestamp,to:timestamp}}}},req=>extra.history(req.user,req.query));
+  route('GET','/api/admin/users',req=>extra.users(req.user));
+  const accountProps={username:shortText,name:shortText,role:{enum:['STUDENT','ADMIN','OPERATIONS','TECHNICIAN']},studentCode:shortText,password:{type:'string',minLength:8,maxLength:256},active:{type:'boolean'},version:{type:'integer',minimum:1}};
+  route('POST','/api/admin/users',req=>extra.saveUser(req.user,null,req.body),{properties:accountProps,required:['username','name','role','password']});
+  route('PUT','/api/admin/users/:id',req=>extra.saveUser(req.user,req.params.id,req.body),{params:uuid,properties:accountProps,required:['username','name','role','active','version']});
+  route('GET','/api/admin/hubs',req=>extra.hubConfigs(req.user));
+  route('PUT','/api/admin/hubs/:id',req=>extra.saveHub(req.user,req.params.id,req.body),{params:idSchema,properties:{capacity:{type:'integer',minimum:0,maximum:500},chargingCount:{type:'integer',minimum:0,maximum:100},chargingRate:{type:'number',exclusiveMinimum:0,maximum:100},version:{type:'integer',minimum:1},confirmed:{type:'boolean'},reset:{type:'boolean'}},required:['version','confirmed']});
 }

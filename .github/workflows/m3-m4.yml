@@ -1,8 +1,8 @@
-name: M3 and M4
+name: Prototype M1-M4
 on:
   pull_request:
   push:
-    branches: [m3-m4]
+    branches: [main, m3-m4, zip-branch]
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -30,3 +30,12 @@ jobs:
       - run: npm run build
       - run: npm run build -w server
       - run: npm run test -w server
+      - run: npm run test:api
+      - run: npx playwright install --with-deps chromium
+      - run: createdb -h localhost -U pikepike pikepike_e2e_1234567890abcdef1234567890abcdef
+        env:
+          PGPASSWORD: test_database
+      - run: npm run test:e2e
+        env:
+          TEST_DATABASE_URL: postgres://pikepike:test_database@localhost:5432/pikepike_e2e_1234567890abcdef1234567890abcdef
+          BROWSER_CHANNEL: chromium

@@ -6,6 +6,7 @@ import {createServer} from './index.js';
 import {Database} from './Database.js';
 import {ChargingPoint} from './domain.js';
 import {up} from '../migrations/001_network.js';
+import {notifyUser} from './prototype.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 test('PostgreSQL commits one concurrent charging request and rejects overlap atomically', {skip: !url}, async () => {
@@ -39,6 +40,7 @@ test('PostgreSQL commits one concurrent charging request and rejects overlap ato
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        await notifyUser(client,'SV','TEST','Atomic notification','test');
         for (const session of ['SA','SB']) {
           await client.query('INSERT INTO charging_session(entity_key,position,id,"requestId","pointId","start","end") VALUES ($1,0,$1,$2,$3,$4,$5)',[session,id,'P',time,end]);
         }
@@ -46,6 +48,7 @@ test('PostgreSQL commits one concurrent charging request and rejects overlap ato
       } finally {client.release();}
     } finally {
       assert.equal((await pool.query('SELECT id FROM charging_session')).rowCount,0);
+      assert.equal((await pool.query('SELECT id FROM notification')).rowCount,0);
     }
   } finally {
     await app?.close();

@@ -1,6 +1,7 @@
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { transaction } from './db.mjs';
 import { Problem } from './service.mjs';
+import { notifyUser } from './prototype.mjs';
 
 function check(condition, status, code, message) {
   if (!condition) throw new Problem(status, code, message);
@@ -141,6 +142,7 @@ export class PrivateVehicle {
         [maXe, quyetDinh, lyDo?.trim() || null],
       );
       await audit(db, maQuanTri, 'PRIVATE_VEHICLE_' + quyetDinh, maXe);
+      await notifyUser(db,vehicle.owner_id,'PRIVATE_VEHICLE_'+quyetDinh,vehicle.plate+(quyetDinh==='APPROVED'?' đã được duyệt':' bị từ chối: '+lyDo),maXe);
       return updated;
     });
   }
@@ -231,7 +233,7 @@ export class HeThongIoT {
         );
         check(
           spotId &&
-            (await first(db, 'SELECT id FROM spots WHERE id=$1', [spotId])),
+            (await first(db, 'SELECT id FROM spots WHERE id=$1 AND NOT retired', [spotId])),
           400,
           'INVALID_SPOT',
           'Cần xác định vị trí đỗ.',
@@ -400,7 +402,7 @@ export class DieuKhienChuyenDi {
     check(trip, 404, 'NOT_FOUND', 'Không tìm thấy chuyến đang chạy.');
     return (
       await this.pool.query(
-        "SELECT s.id,h.name AS hub_name FROM spots s JOIN hubs h ON h.id=s.hub_id WHERE s.id=$1 OR (s.status='EMPTY' AND (SELECT count(*) FILTER(WHERE p.status<>'EMPTY')::numeric / count(*) FROM spots p WHERE p.hub_id=s.hub_id)<.95) ORDER BY h.name,s.id",
+        "SELECT s.id,h.name AS hub_name FROM spots s JOIN hubs h ON h.id=s.hub_id WHERE NOT s.retired AND (s.id=$1 OR (s.status='EMPTY' AND (SELECT count(*) FILTER(WHERE p.status<>'EMPTY')::numeric / count(*) FROM spots p WHERE p.hub_id=s.hub_id AND NOT p.retired)<.95)) ORDER BY h.name,s.id",
         [trip.destination_spot_id],
       )
     ).rows;
@@ -423,7 +425,7 @@ export class DieuKhienChuyenDi {
       }
       const spot = await first(
         db,
-        'SELECT * FROM spots WHERE id=$1 FOR UPDATE',
+        'SELECT * FROM spots WHERE id=$1 AND NOT retired FOR UPDATE',
         [maChoDo],
       );
       const held =
@@ -437,7 +439,7 @@ export class DieuKhienChuyenDi {
       if (!held) {
         const ratio = await first(
           db,
-          "SELECT count(*) FILTER(WHERE status<>'EMPTY')::numeric / count(*) AS ratio FROM spots WHERE hub_id=$1",
+          "SELECT count(*) FILTER(WHERE status<>'EMPTY')::numeric / count(*) AS ratio FROM spots WHERE hub_id=$1 AND NOT retired",
           [spot.hub_id],
         );
         check(

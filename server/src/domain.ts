@@ -9,6 +9,7 @@ export function requireRule(value: unknown, code: string): asserts value {
   if (!value) throw new DomainError(code);
 }
 export class ChargingPoint {
+  retired = false;
   constructor(public id: string, public hubId: string, public status: 'RANH' | 'DANG_SAC' | 'BROKEN', public rate: number) {}
   capNhatTrangThai(status: ChargingPoint['status']) { this.status = status; }
 }

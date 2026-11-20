@@ -1,5 +1,5 @@
 export type User = { id: string; name: string; username: string; role: string };
-export type Hub = { id: string; name: string; capacity: number; used: number; empty: number; available: number; nearFull: boolean; blocked: boolean };
+export type Hub = { id: string; name: string; capacity: number; used: number; empty: number; available: number; nearFull: boolean; blocked: boolean; charging_count:number };
 export type Vehicle = { id: string; name: string; battery: number; status: string; eligible: boolean; lowBattery: boolean };
 export type Reservation = { id: string; vehicle_id: string; vehicle_name: string; battery: number; source_name: string; destination_name: string | null; destination_spot_id: string | null; status: 'DA_XAC_NHAN' | 'DA_HUY' | 'HET_HAN' | 'DA_NHAN'; created_at: string; expires_at: string };
 
@@ -18,6 +18,7 @@ export async function api<T>(path: string, body?: unknown, method?: string): Pro
     });
   } catch { throw new ApiError(0, 'OFFLINE', 'Không kết nối được máy chủ. Vui lòng kiểm tra kết nối và thử lại.'); }
   const data = await response.json().catch(() => null);
+  if(response.status===401&&path!=='/auth/login')window.dispatchEvent(new Event('pikepike-session-expired'));
   if (!response.ok) throw new ApiError(response.status, data?.code ?? 'SERVER_ERROR', data?.message ?? 'Máy chủ chưa sẵn sàng. Vui lòng thử lại.');
   return data as T;
 }

@@ -7,7 +7,7 @@ Giao diện chính tại `/` đăng nhập bằng tài khoản và mật khẩu.
 1. Yêu cầu Node.js 24, npm và PostgreSQL 17. Tạo `.env` từ `.env.example`; đặt `DATABASE_URL`. Dùng database mới cho lần chạy hợp nhất đầu tiên. Dữ liệu từ hai database cũ cần kế hoạch nhập riêng.
 2. Chạy `npm ci` và `docker compose up -d db` (hoặc dùng PostgreSQL 17 đã cài).
 3. Chạy `npm run db:migrate`, `npm run migrate -w server` và `npm run build -w server`.
-4. Nạp dữ liệu thử bằng `npm run db:seed` rồi `npm run seed -w server`. Seed M1 tạo tài khoản thử theo `server/src/seed.mjs`; seed M3 tạo cổng sạc và xe cá nhân thử nếu có tài khoản sinh viên seed.
+4. Nạp dữ liệu thử bằng `npm run db:seed` rồi `npm run seed -w server`. Seed M1 tạo tài khoản thử theo `server/src/seed.mjs`; seed M3 tạo hai cổng sạc mỗi Hub và nhu cầu điều phối demo. Xe cá nhân được khai báo/duyệt qua Cài đặt.
 5. Mở hai terminal chạy `npm run dev -w server` và `npm run dev`. Truy cập [PikePike](http://127.0.0.1:5173/).
 
 Khi dùng `docker compose up --build -d`, hai migration job chạy trên cùng PostgreSQL và API khởi động sau cả hai. Để nạp dữ liệu thử chạy `docker compose exec api npm run seed:m1-m2 -w server`, rồi `docker compose exec api npm run seed -w server`. Web nghe trên cổng 8080. Luồng ứng dụng hiện được xác minh trên web; kiểm tra cookie của bản Android cần chạy trên WebView thật.

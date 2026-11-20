@@ -102,6 +102,18 @@ test('UC-20/21/22 version scenarios, reuse a snapshot and produce repeatable met
   assert.equal(state.snapshots.length,1);
 });
 
+test('UC-17 assigns a pending order only to an idle technician and only once',()=>{
+  const {state,db}=fixture();
+  const pending=new d.RebalancingOrder('P','H01','H02',['EV1'],['t1'],'MANUAL','OP','pending-key',Date.now());
+  state.orders.push(pending);
+  const service=new RebalancingController(db());
+  assert.throws(()=>new RebalancingController(db('TEC')).assignPendingOrder('P','TEC'),/FORBIDDEN/);
+  service.assignPendingOrder('P','TEC');
+  assert.equal(pending.status,'ASSIGNED');
+  assert.equal(pending.technicianId,'TEC');
+  assert.throws(()=>service.assignPendingOrder('P','TEC'),/INVALID_STATE/);
+});
+
 test('UC-23 requires confirmation, recalculates capacity and rejects a duplicate package', () => {
   const {state,now,db} = fixture();
   const run = new d.SimulationRun('R','C',1,'S',now);

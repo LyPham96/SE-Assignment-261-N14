@@ -26,6 +26,7 @@ import './blue.css';
 import { Settings as SettingsPage, usePreferences } from './preferences';
 import { api as accountApi } from './account-api';
 import { QuanLyHoSo } from './account-profile';
+import { PrototypeScreen } from './prototype-screens';
 import { GiaoDienHub, studentScreens } from './student-screens';
 import {
   createApi,
@@ -39,6 +40,9 @@ import {
 const screens = [
   ['login', 'Đăng nhập / vai trò', 'M1'],
   ['settings', 'Cài đặt', 'M1'],
+  ['history', 'Lịch sử sử dụng', 'M1'],
+  ['accounts', 'Quản lý tài khoản', 'M1'],
+  ['hubConfig', 'Cấu hình Hub', 'M1'],
   ['home', 'Tìm Hub', 'M2'],
   ['hub', 'Tài nguyên tại Hub', 'M2'],
   ['vehicle', 'Chọn xe dùng chung', 'M2'],
@@ -67,7 +71,8 @@ const screens = [
 ] as const;
 type Screen = (typeof screens)[number][0];
 function ManHinhChinh() {
-  const { theme, setTheme, language, setLanguage } = usePreferences();
+  const [accountId,setAccountId]=useState<string>();
+  const { theme, setTheme, language, setLanguage, fontSize, setFontSize, preferenceError } = usePreferences(accountId);
   const [screen, setScreen] = useState<Screen>(
     (new URLSearchParams(location.search).get('screen') as Screen) || 'login',
   );
@@ -78,6 +83,7 @@ function ManHinhChinh() {
     };
   }, [screen]);
   const [session, setSession] = useState<{ api: Api; me: Identity }>();
+  useEffect(()=>setAccountId(session?.me.id),[session?.me.id]);
   const activeApi = session?.api;
   useEffect(() => {
     if (!activeApi || !['charge', 'report'].includes(screen)) return;
@@ -177,6 +183,11 @@ function ManHinhChinh() {
     setToast(s);
     window.setTimeout(() => setToast(''), 3200);
   };
+  useEffect(()=>{
+    const expire=()=>{setSession(undefined);setRole('Sinh viên');setScreen('login');history.replaceState(null,'','?screen=login');};
+    window.addEventListener('pikepike-session-expired',expire);
+    return()=>window.removeEventListener('pikepike-session-expired',expire);
+  },[]);
   const button = (label: string, fn: () => void) => (
     <button className="btn" onClick={fn}>
       {label}
@@ -193,6 +204,11 @@ function ManHinhChinh() {
     (screen === 'notifications' && role !== 'Sinh viên');
   let content: React.ReactNode;
   switch (screen) {
+    case 'history':
+    case 'accounts':
+    case 'hubConfig':
+      content=session?<PrototypeScreen key={screen} screen={screen}/>:<p>Đăng nhập để tiếp tục.</p>;
+      break;
     case 'login':
       content = (
         <ManHinhDangNhap
@@ -209,6 +225,15 @@ function ManHinhChinh() {
     case 'settings':
       content = (
         <>
+          {session?.me.role==='STUDENT'&&<>
+            {button('Lịch sử sử dụng',()=>go('history'))}
+            {button('Đặt chỗ đỗ cá nhân',()=>go('parking'))}
+            {button('Sửa đặt chỗ',()=>go('edit'))}
+          </>}
+          {session?.me.role==='ADMIN'&&<>
+            {button('Quản lý tài khoản',()=>go('accounts'))}
+            {button('Cấu hình Hub',()=>go('hubConfig'))}
+          </>}
           {session && ['STUDENT', 'ADMIN'].includes(session.me.role) && (
             <QuanLyHoSo role={session.me.role} />
           )}
@@ -218,7 +243,10 @@ function ManHinhChinh() {
             language={language}
             setLanguage={setLanguage}
             role={role}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
           />
+          {preferenceError&&<p role="alert">{preferenceError}</p>}
           {session &&
             button('Đăng xuất', () => {
               void accountApi('/auth/logout', {}).then(
@@ -237,6 +265,7 @@ function ManHinhChinh() {
       content = null;
   }
   const pageNames: Record<Screen, string> = {
+    history:'Lịch sử sử dụng', accounts:'Quản lý tài khoản', hubConfig:'Cấu hình Hub',
     settings: 'Cài đặt',
     login: 'Đăng nhập',
     home: 'Khám phá',

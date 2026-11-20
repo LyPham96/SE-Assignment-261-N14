@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Bike, MapPin } from 'lucide-react';
 import { api, type Hub, type Vehicle, type Reservation } from './account-api';
+import { PrototypeScreen } from './prototype-screens';
 
 export const studentScreens = [
   'home',
@@ -49,6 +50,7 @@ function HubCard({ hub, onSelect }: { hub: Hub; onSelect: () => void }) {
         <p>
           {hub.available} xe khả dụng · {hub.empty} chỗ trống
         </p>
+        {hub.nearFull&&<p>{hub.blocked?'Hub đầy: hãy chọn Hub khác':'Hub gần đầy'}</p>}
       </div>
       <ArrowRight size={17} />
     </button>
@@ -73,6 +75,7 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
     const fail = (reason: Error) => {
       if (active) setError(reason.message);
     };
+    const refresh=()=>{
     if (['home', 'hub', 'vehicle', 'book'].includes(screen)) {
       void api<Hub[]>('/hubs').then((data) => {
         if (active) setHubs(data);
@@ -83,15 +86,19 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
         if (active) setReservations(data);
       }, fail);
     }
+    };
+    refresh();
+    const timer=setInterval(refresh,5000);
     return () => {
       active = false;
+      clearInterval(timer);
     };
   }, [screen]);
   useEffect(() => {
     if (!hub || !['hub', 'vehicle'].includes(screen)) return;
     let active = true;
     setVehicles(undefined);
-    void api<Vehicle[]>(
+    const refresh=()=>{void api<Vehicle[]>(
       '/hubs/' + encodeURIComponent(hub.id) + '/vehicles',
     ).then(
       (data) => {
@@ -100,9 +107,12 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
       (reason: Error) => {
         if (active) setError(reason.message);
       },
-    );
+    );};
+    refresh();
+    const timer=setInterval(refresh,5000);
     return () => {
       active = false;
+      clearInterval(timer);
     };
   }, [hub?.id, screen]);
   async function submit(work: () => Promise<void>) {
@@ -122,6 +132,10 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
   }
   let body;
   switch (screen) {
+    case 'parking':
+    case 'edit':
+      body=<PrototypeScreen key={screen} screen={screen}/>;
+      break;
     case 'home':
       body = (
         <div className="explore-layout">
@@ -178,6 +192,7 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
               ))}
             </select>
           </label>
+          {hub&&<p>{hub.empty}/{hub.capacity} chỗ trống · {hub.charging_count} cổng sạc{hub.nearFull&&(hub.blocked?' · Hub đầy: hãy chọn Hub khác':' · Hub gần đầy')}</p>}
           {vehicles?.map((item) => (
             <div key={item.id} className="card vehicle short">
               <h3>{item.name}</h3>
@@ -185,6 +200,7 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
                 {item.battery}% pin ·{' '}
                 {item.eligible ? 'Có thể đặt' : 'Không khả dụng'}
               </p>
+              {item.lowBattery&&<p className="note">Pin thấp: nên chọn xe có mức pin cao hơn.</p>}
               {student && (
                 <Primary
                   title="Chọn xe này"
@@ -271,6 +287,9 @@ export function GiaoDienHub({ screen, go, notify, student }: Props) {
                     go('unlock');
                   }}
                 />
+              )}
+              {item.status === 'DA_XAC_NHAN' && (
+                <Primary title="Sửa Hub trả xe" onClick={()=>go('edit')}/>
               )}
               {item.status === 'DA_XAC_NHAN' && (
                 <Primary
@@ -372,6 +391,8 @@ export function GiaoDienChuyenDi({
   const [reporting,setReporting]=useState(false);
   const [location,setLocation]=useState('');
   const [description,setDescription]=useState('');
+  const [demo,setDemo]=useState(false);
+  useEffect(()=>{void api<{enabled:boolean}>('/demo/status').then(v=>setDemo(v.enabled),()=>{});},[]);
   const active = trips.find((trip) => !trip.ended_at);
   useEffect(() => {
     setError('');
@@ -438,6 +459,7 @@ export function GiaoDienChuyenDi({
             onChange={(e) => setCode(e.target.value)}
           />
         </label>
+        {demo&&<button className="btn secondary" disabled={busy} onClick={()=>void run(async()=>{await api('/demo/trip-events',{subjectId:reservation.id,kind:'UNPLUGGED'});notify('Demo: đã rút cáp');})}>Demo: mô phỏng rút cáp</button>}
         <Primary
           title="Nhận xe"
           disabled={busy || !/^\d{6}$/.test(code)}
@@ -502,6 +524,7 @@ export function GiaoDienChuyenDi({
           </select>
         </label>
         <p>Cắm cáp sạc tại chỗ đã chọn trước khi xác nhận.</p>
+        {demo&&<button className="btn secondary" disabled={busy||!spot} onClick={()=>void run(async()=>{await api('/demo/trip-events',{subjectId:active.id,kind:'PLUGGED',spotId:spot});notify('Demo: đã cắm cáp');})}>Demo: mô phỏng cắm cáp</button>}
         <Primary
           title="Xác nhận trả xe"
           disabled={busy || !spot}
@@ -521,7 +544,7 @@ export function GiaoDienChuyenDi({
   } else
     content = (
       <div className="card">
-        <p>Chức năng này chưa có API trong M2.</p>
+        <p>Chọn đặt chỗ hoặc chuyến đi để tiếp tục.</p>
         <Primary
           title="Xem đặt chỗ của tôi"
           onClick={() => go('reservations')}

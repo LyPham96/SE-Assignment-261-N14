@@ -18,6 +18,17 @@ export class RebalancingController {
     return Math.max(0, Math.min(Math.ceil(expectedDemandB - availableB), availableA - minKeepA, freeSpotsB));
   }
   listCandidateVehicles(sourceHubId: string) { return this.db.findCandidateVehicles(sourceHubId); }
+  assignPendingOrder(orderId:string,technicianId:string) {
+    this.db.authorize('OPERATOR');
+    const order=this.db.findOrder(orderId);
+    d.requireRule(order,'NOT_FOUND');
+    d.requireRule(order.status==='PENDING_ASSIGNMENT','INVALID_STATE');
+    d.requireRule(this.db.findIdleTechnicians().some(user=>user.id===technicianId),'TECHNICIAN_BUSY');
+    order.assign(technicianId);
+    new NotificationService(this.db).gui(technicianId,'REBALANCING_ASSIGNED',order.id);
+    this.db.audit('ASSIGN_ORDER',{orderId,technicianId});
+    return order;
+  }
   proposeTransfer(sourceHubId: string, destHubId: string) {
     const source = this.db.findHub(sourceHubId);
     const dest = this.db.findHub(destHubId);
