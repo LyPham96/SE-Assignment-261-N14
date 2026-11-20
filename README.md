@@ -15,7 +15,7 @@ Cài các công cụ sau:
 | Công cụ | Phiên bản / thành phần |
 |---|---|
 | Node.js | 24.x, kèm npm |
-| Docker Desktop / Docker Engine | Có Docker Compose v2; trên Windows bật Docker Desktop ở chế độ Linux containers |
+| Docker Desktop / Docker Engine | Có Docker Compose **2.20 trở lên**; trên Windows bật Docker Desktop ở chế độ Linux containers |
 | Java | **JDK 21**, đặt `JAVA_HOME` tới thư mục JDK |
 | Android Studio + Android SDK | SDK Platform **Android 15 / API 35**, Build-Tools **34.0.0 và 35.0.0**, Platform-Tools (`adb`) |
 | Thiết bị | Emulator API 35 trong Android Studio, hoặc điện thoại Android 6.0/API 23 trở lên có USB debugging |

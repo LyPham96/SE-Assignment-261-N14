@@ -47,7 +47,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           disable-animations: true
-          script: cd android && java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-daemon connectedDebugAndroidTest
+          script: cd android && java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-daemon :app:connectedDebugAndroidTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
