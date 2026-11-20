@@ -1,8 +1,8 @@
 import pg from 'pg';
 
-export function createPool(connectionString = process.env.DATABASE_URL) {
+export function createPool(connectionString = process.env.DATABASE_URL_POOLED || process.env.DATABASE_URL) {
   if (!connectionString) throw new Error('DATABASE_URL is required');
-  return new pg.Pool({ connectionString, max: 10, connectionTimeoutMillis: 5000 });
+  return new pg.Pool({ connectionString, max: 10, connectionTimeoutMillis: 30000 });
 }
 
 export async function transaction(pool, work) {

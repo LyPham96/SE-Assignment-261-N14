@@ -182,7 +182,7 @@ export async function createServer(pool: pg.Pool, service = BoDieuKhienXacThuc.c
 
 async function start() {
   requireRule(process.env.DATABASE_URL, 'DATABASE_URL_REQUIRED');
-  const pool = new pg.Pool({connectionString: process.env.DATABASE_URL, max: 8});
+  const pool = new pg.Pool({connectionString: process.env.DATABASE_URL_POOLED || process.env.DATABASE_URL, max: 8, connectionTimeoutMillis:30_000});
   const m1m2 = BoDieuKhienXacThuc.create(pool);
   const app = await createServer(pool,m1m2);
   const expiration = new BoDinhThoi(await m1m2,error=>app.log.error(error));

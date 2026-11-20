@@ -2,15 +2,21 @@
 
 Giao diện chính tại `/` đăng nhập bằng tài khoản và mật khẩu. Một Fastify phục vụ cả `/api` và `/api/v1`; cả hai dùng cùng cookie phiên M1 và một PostgreSQL. Đặt/hủy chỗ M2 xuất hiện ở dashboard M3. Điều chuyển M4 cập nhật đội xe và chỗ đỗ mà M2 đọc, trong cùng giao dịch.
 
-## Chạy dev
+## Chạy bản nộp: Docker server → Android client
+
+Làm theo [README gốc](../README.md) từ mục 1 đến mục 3. `compose.yaml` dùng Neon được cấu hình sẵn: container `init` chạy `npm run setup -w server` bằng kết nối direct (migration + seed), rồi API/worker dùng kết nối pooled. Giao diện đóng gói sẵn trong APK; container `web` chỉ chạy khi chọn profile `debug`.
+
+Để dùng PostgreSQL 17 local thay Neon, thêm `-f compose.yaml -f compose.postgres.yaml` như README gốc. Không cần chạy migration/seed thủ công khi dùng Docker.
+
+## Chạy backend không dùng Docker (tùy chọn cho dev)
 
 1. Yêu cầu Node.js 24, npm và PostgreSQL 17. Tạo `.env` từ `.env.example`; đặt `DATABASE_URL`. Dùng database mới cho lần chạy hợp nhất đầu tiên. Dữ liệu từ hai database cũ cần kế hoạch nhập riêng.
-2. Chạy `npm ci` và `docker compose up -d db` (hoặc dùng PostgreSQL 17 đã cài).
-3. Chạy `npm run db:migrate`, `npm run migrate -w server` và `npm run build -w server`.
-4. Nạp dữ liệu thử bằng `npm run db:seed` rồi `npm run seed -w server`. Seed M1 tạo tài khoản thử theo `server/src/seed.mjs`; seed M3 tạo hai cổng sạc mỗi Hub và nhu cầu điều phối demo. Xe cá nhân được khai báo/duyệt qua Cài đặt.
+2. Chạy `npm ci`. Có thể giữ Neon trong `.env` hoặc dùng PostgreSQL riêng.
+3. Chạy `npm run build -w server`, rồi `npm run setup -w server` để chạy cả hai bộ migration và seed.
+4. Seed M1 tạo tài khoản thử theo `server/src/seed.mjs`; seed M3 tạo hai cổng sạc mỗi Hub và nhu cầu điều phối demo. Xe cá nhân được khai báo/duyệt qua Cài đặt.
 5. Mở hai terminal chạy `npm run dev -w server` và `npm run dev`. Truy cập [PikePike](http://127.0.0.1:5173/).
 
-Khi dùng `docker compose up --build -d`, hai migration job chạy trên cùng PostgreSQL và API khởi động sau cả hai. Để nạp dữ liệu thử chạy `docker compose exec api npm run seed:m1-m2 -w server`, rồi `docker compose exec api npm run seed -w server`. Web nghe trên cổng 8080. Luồng ứng dụng hiện được xác minh trên web; kiểm tra cookie của bản Android cần chạy trên WebView thật.
+API nghe cổng 3000. Native HTTP trong Capacitor dùng cookie jar Android cho phiên đăng nhập; APK debug cho phép HTTP đến Docker API. Kiểm thử Android nằm ở `android/app/src/androidTest/java/vn/pikepike/app/NativeLoginTest.java` và workflow `build-clients.yml`.
 
 ## Đối chiếu điểm gọi
 

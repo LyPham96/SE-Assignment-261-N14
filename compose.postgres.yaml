@@ -1,0 +1,28 @@
+# Optional local PostgreSQL; use together with compose.yaml.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pikepike
+      POSTGRES_USER: pikepike
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pikepike_demo_2026}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pikepike -d pikepike"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  init:
+    environment:
+      DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD:-pikepike_demo_2026}@db:5432/pikepike
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    environment:
+      DATABASE_URL: postgres://pikepike:${POSTGRES_PASSWORD:-pikepike_demo_2026}@db:5432/pikepike
+volumes:
+  pgdata:

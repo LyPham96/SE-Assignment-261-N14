@@ -22,7 +22,7 @@ try {
   await migrate(databaseUrl);
   await runner({ databaseUrl, dir: fileURLToPath(new URL('../server/migrations/',import.meta.url)), migrationsTable:'pgmigrations', direction:'up',count:Infinity });
   await seed(pool);
-  const serverEnv={...process.env,DATABASE_URL:databaseUrl,PORT:'3002',HOST:'127.0.0.1',DEMO_IOT:'true',USE_REAL_IOT:'false',IOT_KEY:iotKey};
+  const serverEnv={...process.env,DATABASE_URL:databaseUrl,DATABASE_URL_POOLED:databaseUrl,PORT:'3002',HOST:'127.0.0.1',DEMO_IOT:'true',USE_REAL_IOT:'false',IOT_KEY:iotKey};
   await promisify(execFile)(process.execPath,['server/dist/seed.js'],{env:serverEnv,windowsHide:true});
   app = spawn(process.execPath,['server/dist/index.js'],{env:serverEnv,windowsHide:true,stdio:'ignore'});
   let apiReady=false;
