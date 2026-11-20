@@ -43,9 +43,11 @@ public class NativeLoginTest {
             waitUntil(scenario, "!!document.querySelector('form button:not([disabled])')");
             evaluate(scenario, "document.querySelector('form').requestSubmit()");
             waitUntil(scenario, "location.search.includes('screen=home') && document.body.innerText.includes('Ga Metro')");
-            evaluate(scenario, "location.reload()");
-            waitUntil(scenario, "location.search.includes('screen=home') && document.body.innerText.includes('Ga Metro')");
+            // A reload is asynchronous: exclude the old DOM before checking the restored session.
+            evaluate(scenario, "window.__nativeReloadProbe = true; location.reload()");
+            waitUntil(scenario, "!window.__nativeReloadProbe && location.search.includes('screen=home') && document.body.innerText.includes('Ga Metro')");
             evaluate(scenario, "document.querySelector('[aria-label=\"Hồ sơ và cài đặt\"]').click()");
+            waitUntil(scenario, "location.search.includes('screen=settings')");
             waitUntil(scenario, "Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Đăng xuất')");
             evaluate(scenario, "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Đăng xuất').click()");
             waitUntil(scenario, "location.search.includes('screen=login') && !!document.querySelector('input[autocomplete=username]')");
