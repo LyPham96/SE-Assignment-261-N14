@@ -11,6 +11,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - run: cp .env.example .env
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -20,11 +21,12 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;34.0.0' 'build-tools;35.0.0'
       - run: npm ci
       - name: Build and start Docker server with an isolated local database
         run: |
-          cp .env.example .env
           docker compose -f compose.yaml -f compose.postgres.yaml up --build -d --wait --wait-timeout 180 api
           curl --fail --retry 10 --retry-delay 2 http://127.0.0.1:3000/api/health
       - run: npm run android:build
