@@ -8,7 +8,6 @@
     "verify": "npm run build && npm run build -w server && npm test",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "screenshots": "node scripts/screenshots.mjs",
     "android:add": "cap add android",
     "android:sync": "node --env-file-if-exists=.env scripts/android.mjs sync",
     "android:build": "node --env-file-if-exists=.env scripts/android.mjs build",

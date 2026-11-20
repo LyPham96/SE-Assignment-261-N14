@@ -5,7 +5,7 @@
 ## 1. Chuẩn bị sau khi clone
 
 ```sh
-git clone https://github.com/LyPham96/SE-Assignment-261-N14.git
+git clone --branch zip-branch --single-branch https://github.com/LyPham96/SE-Assignment-261-N14.git
 cd SE-Assignment-261-N14
 npm ci
 ```
@@ -246,8 +246,7 @@ App Android vẫn gọi Docker API; không cần đổi `ANDROID_API_BASE_URL` k
 
 ## 6. Kiểm thử và cấu trúc
 
-- [Đối chiếu UC-01–27 và phạm vi kiểm chứng](PROTOTYPE-COVERAGE.md).
-- [Chi tiết backend/API](server/README.md); OpenAPI: http://127.0.0.1:3000/api/v1/openapi.json.
+- OpenAPI của backend: http://127.0.0.1:3000/api/v1/openapi.json.
 - CI **Docker server and Android client** build Docker image, khởi tạo PostgreSQL riêng, build APK và kiểm tra app trên emulator API 35. APK nằm trong artifact `pikepike-debug-apk` của mỗi lần chạy thành công.
 - CI **Prototype M1-M4** kiểm tra nghiệp vụ/PostgreSQL và E2E giao diện.
 
@@ -260,6 +259,8 @@ npm run verify
 
 Bash: dùng `export TEST_DATABASE_URL=...`. Tên được chấp nhận là `pikepike_test` hoặc `pikepike_test_<32 ký tự hex>`. E2E cần database trống mới tên `pikepike_e2e_<32 ký tự hex>`, đổi biến này rồi chạy `npx playwright install chromium` và `npm run test:e2e`.
 
-`mockups/` là ảnh thiết kế; `public/images/`, icon/splash Android là tài nguyên cần cho ứng dụng.
+`src/` là giao diện client; `server/` chứa API, worker, migration, seed và test; `android/` là project Android; `scripts/` chứa script build Android và E2E. `public/images/`, icon/splash Android là tài nguyên cần cho ứng dụng.
+
+Nhánh `zip-branch` chỉ giữ source, test, tài nguyên và cấu hình cần để build/chạy, cùng README này. Để lấy bản nộp sạch, [tải ZIP của nhánh](https://github.com/LyPham96/SE-Assignment-261-N14/archive/refs/heads/zip-branch.zip). ZIP không chứa `node_modules`, `.env`, APK, thư mục build, report hoặc mockup; sau khi giải nén, làm theo hướng dẫn từ mục 1.
 
 Tham khảo công cụ: [Capacitor 7 / JDK 21](https://capacitorjs.com/docs/v7/updating/7-0), [Capacitor native HTTP](https://capacitorjs.com/docs/v7/apis/http).

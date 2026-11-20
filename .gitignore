@@ -5,7 +5,7 @@ dist/
 *.tsbuildinfo
 android/.gradle/
 android/local.properties
-mockups/reference-*.png
-mockups/check-*.png
+mockups/
+*.pdf
 test-results/
 playwright-report/
